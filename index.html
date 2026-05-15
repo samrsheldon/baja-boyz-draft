@@ -10,6 +10,21 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC-PqWLpmhERwaI8k4LRZfoqMAw4MPcJgs",
+      authDomain: "baja-boyz-wc-2026-challenge.firebaseapp.com",
+      databaseURL: "https://baja-boyz-wc-2026-challenge-default-rtdb.firebaseio.com",
+      projectId: "baja-boyz-wc-2026-challenge",
+      storageBucket: "baja-boyz-wc-2026-challenge.firebasestorage.app",
+      messagingSenderId: "254731927711",
+      appId: "1:254731927711:web:d4575287d66599caff62aa",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+  </script>
   <style>
     @keyframes glow {
       0%, 100% { box-shadow: 0 0 4px 1px rgba(74, 222, 128, 0.4); }
@@ -1094,13 +1109,12 @@
 
     // ─── PASS MODAL ───────────────────────────────────────────────────────────
 
-    function PassModal({ info, state, onClose }) {
+    function PassModal({ info, roomId, onClose }) {
       function sendToWhatsApp() {
-        const enc = encodeURIComponent(btoa(JSON.stringify(state)));
-        const url = `${PAGES_URL}?draft=${enc}`;
+        const url = `${PAGES_URL}?room=${roomId}`;
         const msg = info.isDone
-          ? `🏆 Baja Boyz WC 2026 Draft complete! All 48 teams have been picked.\n\nView rosters & leaderboard:\n${url}`
-          : `⚽ Baja Boyz WC 2026 Draft — Pick ${info.pickNum}/48\n\n${info.pickerName} just picked ${info.team.flag} ${info.team.name}!\n\n🕐 ${info.nextPlayerName}, you're on the clock!\n\n👉 Open the draft:\n${url}`;
+          ? `🏆 Baja Boyz WC 2026 Challenge complete! All 48 teams have been picked.\n\nView rosters & leaderboard:\n${url}`
+          : `⚽ Baja Boyz WC 2026 Challenge — Pick ${info.pickNum}/48\n\n${info.pickerName} just picked ${info.team.flag} ${info.team.name}!\n\n🕐 ${info.nextPlayerName}, you're on the clock!\n\n👉 Open the link:\n${url}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
       }
 
@@ -1144,32 +1158,36 @@
     // ─── APP ──────────────────────────────────────────────────────────────────
 
     function App() {
-      const [state, setState] = useState(() => {
-        // Check URL for shared state first
-        try {
-          const params = new URLSearchParams(window.location.search);
-          const enc = params.get('draft');
-          if (enc) {
-            const imported = JSON.parse(atob(enc));
-            window.history.replaceState({}, '', window.location.pathname);
-            return { ...INITIAL_STATE, ...imported };
-          }
-        } catch {}
-        // Fall back to localStorage
-        try {
-          const saved = localStorage.getItem(STORAGE_KEY);
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (!Array.isArray(parsed.picks)) parsed.picks = Array(48).fill(null);
-            return { ...INITIAL_STATE, ...parsed };
-          }
-        } catch {}
-        return INITIAL_STATE;
-      });
+      // Firebase-synced draft state
+      const [state, setState] = useState(INITIAL_STATE);
+      // Local UI state (not synced)
+      const [activeTab, setActiveTab]   = React.useState('draft');
+      const [passModal, setPassModal]   = React.useState(null);
+      const [inviteUrl, setInviteUrl]   = React.useState(null);
+      const [roomId, setRoomId]         = React.useState(() =>
+        new URLSearchParams(window.location.search).get('room')
+      );
+      const [connected, setConnected]   = React.useState(false);
 
+      // Subscribe to Firebase room on load (if room param in URL)
       useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      }, [state]);
+        if (!roomId) return;
+        const ref = db.ref(`drafts/${roomId}`);
+        ref.on('value', snap => {
+          const data = snap.val();
+          if (data) {
+            setState({ ...INITIAL_STATE, ...data });
+            setConnected(true);
+          }
+        });
+        return () => ref.off();
+      }, [roomId]);
+
+      // Write to Firebase + local state
+      function writeState(newState) {
+        setState(newState);
+        if (roomId) db.ref(`drafts/${roomId}`).set(newState);
+      }
 
       // Claudinho AI auto-pick
       useEffect(() => {
@@ -1177,52 +1195,38 @@
         const currentPickIdx = state.picks.findIndex(p => p === null);
         if (currentPickIdx === -1) return;
         if (pickToPlayer(currentPickIdx, state.draftOrder) !== state.aiPlayerIdx) return;
-
         const timer = setTimeout(() => {
           const pickedSet = new Set(state.picks.filter(Boolean));
           const available = TEAMS.filter(t => !pickedSet.has(t.id));
           if (!available.length) return;
-          // Best available, with slight top-3 randomness to feel natural
           const sorted = [...available].sort((a, b) => (TEAM_RATINGS[b.id] || 50) - (TEAM_RATINGS[a.id] || 50));
           const pool = sorted.slice(0, Math.min(3, sorted.length));
           const pick = pool[Math.floor(Math.random() * pool.length)];
-          setState(s => {
-            const idx = s.picks.findIndex(p => p === null);
-            if (idx === -1) return s;
-            const picks = [...s.picks]; picks[idx] = pick.id;
-            return { ...s, picks };
-          });
+          const idx = state.picks.findIndex(p => p === null);
+          if (idx === -1) return;
+          const picks = [...state.picks]; picks[idx] = pick.id;
+          writeState({ ...state, picks });
         }, 1800);
-
         return () => clearTimeout(timer);
       }, [state.picks, state.phase, state.aiPlayerIdx, state.draftOrder]);
 
-      function setTab(tab) {
-        setState(s => ({ ...s, activeTab: tab }));
-      }
-
       function handleStart(players, draftOrder, aiPlayerIdx) {
-        const newState = { ...INITIAL_STATE, phase: 'draft', players, draftOrder,
-          picks: Array(48).fill(null), scores: {}, activeTab: 'draft',
-          aiPlayerIdx: aiPlayerIdx ?? null };
+        const newRoomId = Math.random().toString(36).substr(2, 6).toUpperCase();
+        const newState = { phase: 'draft', players, draftOrder,
+          picks: Array(48).fill(null), scores: {}, aiPlayerIdx: aiPlayerIdx ?? null };
+        db.ref(`drafts/${newRoomId}`).set(newState);
         setState(newState);
-        // Generate invite URL from fresh state so participants land on the draft board
-        try {
-          setInviteUrl(`${PAGES_URL}?draft=${encodeURIComponent(btoa(JSON.stringify(newState)))}`);
-        } catch {}
+        setRoomId(newRoomId);
+        window.history.replaceState({}, '', `?room=${newRoomId}`);
+        setInviteUrl(`${PAGES_URL}?room=${newRoomId}`);
       }
-
-      const [passModal, setPassModal] = React.useState(null);
-      const [inviteUrl, setInviteUrl]  = React.useState(null);
 
       function handlePick(teamId) {
         const idx = state.picks.findIndex(p => p === null);
         if (idx === -1) return;
         const picks = [...state.picks];
         picks[idx] = teamId;
-        setState(s => ({ ...s, picks }));
-
-        // Build pass-to-WhatsApp modal info (skip for AI picks)
+        writeState({ ...state, picks });
         const pickerIdx = pickToPlayer(idx, state.draftOrder);
         if (pickerIdx !== state.aiPlayerIdx) {
           const team = TEAM_BY_ID[teamId];
@@ -1240,34 +1244,30 @@
       }
 
       function handleUndo() {
-        setState(s => {
-          const lastIdx = [...s.picks].map((p, i) => p ? i : -1).filter(i => i >= 0).slice(-1)[0];
-          if (lastIdx === undefined || lastIdx < 0) return s;
-          const picks = [...s.picks];
-          picks[lastIdx] = null;
-          return { ...s, picks };
-        });
+        const lastIdx = [...state.picks].map((p, i) => p ? i : -1).filter(i => i >= 0).slice(-1)[0];
+        if (lastIdx === undefined || lastIdx < 0) return;
+        const picks = [...state.picks];
+        picks[lastIdx] = null;
+        writeState({ ...state, picks });
       }
 
       function handleUpdateScore(teamId, data) {
-        setState(s => ({ ...s, scores: { ...s.scores, [teamId]: data } }));
+        writeState({ ...state, scores: { ...state.scores, [teamId]: data } });
       }
 
       function handleShare() {
-        try {
-          const enc = encodeURIComponent(btoa(JSON.stringify(state)));
-          const url = `${PAGES_URL}?draft=${enc}`;
-          navigator.clipboard.writeText(url).then(() => {
-            alert('Link copied! Paste it into WhatsApp.');
-          }).catch(() => prompt('Copy this link:', url));
-        } catch {
-          alert('Could not generate link.');
-        }
+        const url = `${PAGES_URL}?room=${roomId}`;
+        navigator.clipboard.writeText(url)
+          .then(() => alert('Link copied! Paste it into WhatsApp.'))
+          .catch(() => prompt('Copy this link:', url));
       }
 
       function handleReset() {
         if (confirm('Reset the entire draft and all scores? This cannot be undone.')) {
+          if (roomId) db.ref(`drafts/${roomId}`).remove();
           setState(INITIAL_STATE);
+          setRoomId(null);
+          window.history.replaceState({}, '', window.location.pathname);
         }
       }
 
@@ -1288,7 +1288,6 @@
 
       return (
         <div className="min-h-screen flex flex-col">
-          {/* Header */}
           <header className="bg-gray-900 border-b border-gray-800 sticky top-0 z-40">
             <div className="flex items-center justify-between px-4 py-2.5">
               <div className="flex items-center gap-2.5">
@@ -1300,6 +1299,11 @@
                       <span> · {state.players[pickToPlayer(draftProgress, state.draftOrder)]} on clock</span>
                     )}
                   </div>
+                  {roomId && (
+                    <div style={{fontSize:'8px',letterSpacing:'0.15em'}} className="text-green-600 font-mono">
+                      ● LIVE · {roomId}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex gap-2">
@@ -1322,9 +1326,9 @@
               {tabs.map(tab => (
                 <button
                   key={tab.id}
-                  onClick={() => setTab(tab.id)}
+                  onClick={() => setActiveTab(tab.id)}
                   className={`flex-1 py-2 flex flex-col items-center gap-0.5 text-xs font-semibold transition-colors border-b-2 ${
-                    state.activeTab === tab.id
+                    activeTab === tab.id
                       ? 'text-green-400 border-green-400'
                       : 'text-gray-500 border-transparent hover:text-gray-300'
                   }`}
@@ -1337,15 +1341,15 @@
           </header>
 
           {inviteUrl && <InviteModal url={inviteUrl} players={state.players} onClose={() => setInviteUrl(null)} />}
-          {passModal && <PassModal info={passModal} state={state} onClose={() => setPassModal(null)} />}
+          {passModal && <PassModal info={passModal} roomId={roomId} onClose={() => setPassModal(null)} />}
 
           <main className="flex-1 overflow-auto">
-            {state.activeTab === 'draft'       && <DraftScreen       state={state} onPick={handlePick} onUndo={handleUndo} />}
-            {state.activeTab === 'rosters'     && <RostersScreen     state={state} />}
-            {state.activeTab === 'groups'      && <GroupsScreen      state={state} />}
-            {state.activeTab === 'rankings'    && <RankingsScreen    state={state} />}
-            {state.activeTab === 'scoring'     && <ScoringScreen     state={state} onUpdateScore={handleUpdateScore} />}
-            {state.activeTab === 'leaderboard' && <LeaderboardScreen state={state} />}
+            {activeTab === 'draft'       && <DraftScreen       state={state} onPick={handlePick} onUndo={handleUndo} />}
+            {activeTab === 'rosters'     && <RostersScreen     state={state} />}
+            {activeTab === 'groups'      && <GroupsScreen      state={state} />}
+            {activeTab === 'rankings'    && <RankingsScreen    state={state} />}
+            {activeTab === 'scoring'     && <ScoringScreen     state={state} onUpdateScore={handleUpdateScore} />}
+            {activeTab === 'leaderboard' && <LeaderboardScreen state={state} />}
           </main>
         </div>
       );
