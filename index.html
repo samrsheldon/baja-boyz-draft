@@ -1096,7 +1096,7 @@
 
     function PassModal({ info, state, onClose }) {
       function sendToWhatsApp() {
-        const enc = btoa(JSON.stringify(state));
+        const enc = encodeURIComponent(btoa(JSON.stringify(state)));
         const url = `${PAGES_URL}?draft=${enc}`;
         const msg = info.isDone
           ? `🏆 Baja Boyz WC 2026 Draft complete! All 48 teams have been picked.\n\nView rosters & leaderboard:\n${url}`
@@ -1208,7 +1208,7 @@
         setState(newState);
         // Generate invite URL from fresh state so participants land on the draft board
         try {
-          setInviteUrl(`${PAGES_URL}?draft=${btoa(JSON.stringify(newState))}`);
+          setInviteUrl(`${PAGES_URL}?draft=${encodeURIComponent(btoa(JSON.stringify(newState)))}`);
         } catch {}
       }
 
@@ -1255,7 +1255,7 @@
 
       function handleShare() {
         try {
-          const enc = btoa(JSON.stringify(state));
+          const enc = encodeURIComponent(btoa(JSON.stringify(state)));
           const url = `${PAGES_URL}?draft=${enc}`;
           navigator.clipboard.writeText(url).then(() => {
             alert('Link copied! Paste it into WhatsApp.');
