@@ -149,6 +149,7 @@
     };
 
     const STORAGE_KEY = 'wc2026_snake_v2';
+    const PAGES_URL = 'https://samrsheldon.github.io/baja-boyz-draft/';
 
     const INITIAL_STATE = {
       phase: 'setup',
@@ -845,6 +846,56 @@
       );
     }
 
+
+    // ─── PASS MODAL ───────────────────────────────────────────────────────────
+
+    function PassModal({ info, state, onClose }) {
+      function sendToWhatsApp() {
+        const enc = btoa(JSON.stringify(state));
+        const url = `${PAGES_URL}?draft=${enc}`;
+        const msg = info.isDone
+          ? `🏆 Baja Boyz WC 2026 Draft complete! All 48 teams have been picked.\n\nView rosters & leaderboard:\n${url}`
+          : `⚽ Baja Boyz WC 2026 Draft — Pick ${info.pickNum}/48\n\n${info.pickerName} just picked ${info.team.flag} ${info.team.name}!\n\n🕐 ${info.nextPlayerName}, you're on the clock!\n\n👉 Open the draft:\n${url}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+      }
+
+      return (
+        <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl p-6 w-full max-w-xs border border-gray-700 shadow-2xl text-center">
+            <div className="text-5xl mb-3">{info.isDone ? '🏆' : info.team.flag}</div>
+            <h3 className="text-lg font-black text-white">
+              {info.isDone ? 'Draft Complete!' : `${info.pickerName} picked`}
+            </h3>
+            {!info.isDone && (
+              <div className="text-xl font-bold text-gray-200 mt-1">{info.team.name}</div>
+            )}
+
+            {!info.isDone && info.nextPlayerName && (
+              <div className="mt-4 bg-gray-700/60 rounded-xl p-3">
+                <div className="text-xs text-gray-400 uppercase tracking-widest mb-1">Up Next</div>
+                <div className="text-white font-bold text-lg">{info.nextPlayerName}</div>
+              </div>
+            )}
+
+            <button
+              onClick={sendToWhatsApp}
+              className="w-full mt-5 bg-[#25D366] hover:bg-[#1ebe57] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm"
+            >
+              <span className="text-lg">📲</span>
+              {info.isDone ? 'Share results on WhatsApp' : 'Pass to WhatsApp group'}
+            </button>
+
+            <button
+              onClick={onClose}
+              className="w-full mt-2 text-gray-600 hover:text-gray-400 text-xs py-2 transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     // ─── APP ──────────────────────────────────────────────────────────────────
 
     function App() {
@@ -909,14 +960,30 @@
         setState({ ...INITIAL_STATE, phase: 'draft', players, draftOrder, picks: Array(48).fill(null), scores: {}, activeTab: 'draft', aiPlayerIdx: aiPlayerIdx ?? null });
       }
 
+      const [passModal, setPassModal] = React.useState(null);
+
       function handlePick(teamId) {
-        setState(s => {
-          const idx = s.picks.findIndex(p => p === null);
-          if (idx === -1) return s;
-          const picks = [...s.picks];
-          picks[idx] = teamId;
-          return { ...s, picks };
-        });
+        const idx = state.picks.findIndex(p => p === null);
+        if (idx === -1) return;
+        const picks = [...state.picks];
+        picks[idx] = teamId;
+        setState(s => ({ ...s, picks }));
+
+        // Build pass-to-WhatsApp modal info (skip for AI picks)
+        const pickerIdx = pickToPlayer(idx, state.draftOrder);
+        if (pickerIdx !== state.aiPlayerIdx) {
+          const team = TEAM_BY_ID[teamId];
+          const nextPickIdx = idx + 1;
+          const isDone = nextPickIdx >= 48;
+          const nextPlayerIdx = isDone ? null : pickToPlayer(nextPickIdx, state.draftOrder);
+          setPassModal({
+            pickerName: state.players[pickerIdx],
+            team,
+            nextPlayerName: isDone ? null : state.players[nextPlayerIdx],
+            isDone,
+            pickNum: idx + 1,
+          });
+        }
       }
 
       function handleUndo() {
@@ -935,13 +1002,13 @@
 
       function handleShare() {
         try {
-          const enc  = btoa(JSON.stringify(state));
-          const url  = `${window.location.origin}${window.location.pathname}?draft=${enc}`;
+          const enc = btoa(JSON.stringify(state));
+          const url = `${PAGES_URL}?draft=${enc}`;
           navigator.clipboard.writeText(url).then(() => {
-            alert('Draft URL copied! Share it with your group to let them view current state.');
-          }).catch(() => prompt('Copy this URL to share:', url));
+            alert('Link copied! Paste it into WhatsApp.');
+          }).catch(() => prompt('Copy this link:', url));
         } catch {
-          alert('Could not generate share URL.');
+          alert('Could not generate link.');
         }
       }
 
@@ -1013,6 +1080,8 @@
               ))}
             </nav>
           </header>
+
+          {passModal && <PassModal info={passModal} state={state} onClose={() => setPassModal(null)} />}
 
           <main className="flex-1 overflow-auto">
             {state.activeTab === 'draft'       && <DraftScreen       state={state} onPick={handlePick} onUndo={handleUndo} />}
