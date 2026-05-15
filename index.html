@@ -163,17 +163,18 @@
       Playoff:  'bg-gray-800/30',
     };
 
-    const STORAGE_KEY = 'wc2026_snake_v2';
-    const PAGES_URL = 'https://samrsheldon.github.io/baja-boyz-draft/';
+    const PAGES_URL      = 'https://samrsheldon.github.io/baja-boyz-draft/';
+    const FIXED_ROOM_ID  = 'BAJAWC26';
+    const FIXED_PLAYERS  = ['Bucklinho','Garrinho','Paulinho','Saminho','Elliottinho','Claudinho','Zakinho','Fellinho'];
+    const FIXED_AI_IDX   = 5;
 
-    const INITIAL_STATE = {
-      phase: 'setup',
-      players: Array(8).fill(''),
-      draftOrder: [],
+    const DEFAULT_DRAFT_STATE = {
+      phase: 'draft',
+      players: FIXED_PLAYERS,
+      draftOrder: [0,1,2,3,4,5,6,7],
       picks: Array(48).fill(null),
       scores: {},
-      activeTab: 'draft',
-      aiPlayerIdx: null,
+      aiPlayerIdx: FIXED_AI_IDX,
     };
 
     // ─── HELPERS ──────────────────────────────────────────────────────────────
@@ -1166,36 +1167,74 @@
 
     // ─── APP ──────────────────────────────────────────────────────────────────
 
-    function App() {
-      // Firebase-synced draft state
-      const [state, setState] = useState(INITIAL_STATE);
-      // Local UI state (not synced)
-      const [activeTab, setActiveTab]   = React.useState('draft');
-      const [passModal, setPassModal]   = React.useState(null);
-      const [inviteUrl, setInviteUrl]   = React.useState(null);
-      const [roomId, setRoomId]         = React.useState(() =>
-        new URLSearchParams(window.location.search).get('room')
-      );
-      const [connected, setConnected]   = React.useState(false);
+    // ─── SETTINGS SCREEN ─────────────────────────────────────────────────────
 
-      // Subscribe to Firebase room on load (if room param in URL)
+    function SettingsScreen({ onReset }) {
+      return (
+        <div className="p-4 max-w-lg mx-auto space-y-6">
+          <div>
+            <h2 className="text-white font-black text-lg mb-1">Draft Order</h2>
+            <p className="text-gray-500 text-xs mb-3">Snake format · 8 players · 6 rounds · 48 picks</p>
+            <div className="bg-gray-900 rounded-xl divide-y divide-gray-800">
+              {FIXED_PLAYERS.map((name, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                  <span className="text-gray-600 font-mono text-xs w-4">{i + 1}</span>
+                  <span className="text-white font-semibold flex-1">{name}</span>
+                  {i === FIXED_AI_IDX && (
+                    <span className="text-xs bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded-full">AI</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-white font-black text-lg mb-1">Share Link</h2>
+            <p className="text-gray-500 text-xs mb-3">Send this to all players — opens straight to the live draft.</p>
+            <div className="bg-gray-900 rounded-xl px-4 py-3 font-mono text-xs text-green-400 break-all">{PAGES_URL}</div>
+          </div>
+
+          <div>
+            <h2 className="text-red-400 font-black text-lg mb-1">Danger Zone</h2>
+            <p className="text-gray-500 text-xs mb-3">Reset wipes all picks and scores and cannot be undone.</p>
+            <button
+              onClick={onReset}
+              className="w-full bg-red-900/40 hover:bg-red-800/60 text-red-400 hover:text-red-300 font-bold py-3 rounded-xl transition-colors text-sm border border-red-900"
+            >
+              Reset Draft
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── APP ──────────────────────────────────────────────────────────────────
+
+    function App() {
+      const [state, setState]         = useState(DEFAULT_DRAFT_STATE);
+      const [loading, setLoading]     = React.useState(true);
+      const [activeTab, setActiveTab] = React.useState('draft');
+      const [passModal, setPassModal] = React.useState(null);
+
+      // Connect to fixed Firebase room on mount; initialize if first run
       useEffect(() => {
-        if (!roomId) return;
-        const ref = db.ref(`drafts/${roomId}`);
+        const ref = db.ref(`drafts/${FIXED_ROOM_ID}`);
         ref.on('value', snap => {
           const data = snap.val();
           if (data) {
-            setState({ ...INITIAL_STATE, ...data });
-            setConnected(true);
+            setState({ ...DEFAULT_DRAFT_STATE, ...data });
+          } else {
+            ref.set(DEFAULT_DRAFT_STATE);
+            setState(DEFAULT_DRAFT_STATE);
           }
+          setLoading(false);
         });
         return () => ref.off();
-      }, [roomId]);
+      }, []);
 
-      // Write to Firebase + local state
       function writeState(newState) {
         setState(newState);
-        if (roomId) db.ref(`drafts/${roomId}`).set(newState);
+        db.ref(`drafts/${FIXED_ROOM_ID}`).set(newState);
       }
 
       // Claudinho AI auto-pick
@@ -1218,17 +1257,6 @@
         }, 1800);
         return () => clearTimeout(timer);
       }, [state.picks, state.phase, state.aiPlayerIdx, state.draftOrder]);
-
-      function handleStart(players, draftOrder, aiPlayerIdx) {
-        const newRoomId = Math.random().toString(36).substr(2, 6).toUpperCase();
-        const newState = { phase: 'draft', players, draftOrder,
-          picks: Array(48).fill(null), scores: {}, aiPlayerIdx: aiPlayerIdx ?? null };
-        db.ref(`drafts/${newRoomId}`).set(newState);
-        setState(newState);
-        setRoomId(newRoomId);
-        window.history.replaceState({}, '', `?room=${newRoomId}`);
-        setInviteUrl(`${PAGES_URL}?room=${newRoomId}`);
-      }
 
       function handlePick(teamId) {
         const idx = state.picks.findIndex(p => p === null);
@@ -1265,23 +1293,24 @@
       }
 
       function handleShare() {
-        const url = `${PAGES_URL}?room=${roomId}`;
-        navigator.clipboard.writeText(url)
-          .then(() => alert('Link copied! Paste it into WhatsApp.'))
-          .catch(() => prompt('Copy this link:', url));
+        navigator.clipboard.writeText(PAGES_URL)
+          .then(() => alert('Link copied! Send it to the WhatsApp group.'))
+          .catch(() => prompt('Copy this link:', PAGES_URL));
       }
 
       function handleReset() {
         if (confirm('Reset the entire draft and all scores? This cannot be undone.')) {
-          if (roomId) db.ref(`drafts/${roomId}`).remove();
-          setState(INITIAL_STATE);
-          setRoomId(null);
-          window.history.replaceState({}, '', window.location.pathname);
+          writeState(DEFAULT_DRAFT_STATE);
         }
       }
 
-      if (state.phase === 'setup') {
-        return <SetupScreen onStart={handleStart} />;
+      if (loading) {
+        return (
+          <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4">
+            <img src={LOGO_SRC} alt="Baja Boyz" className="w-24 opacity-60 select-none" style={{filter:'invert(1) brightness(0.7)'}} />
+            <div className="text-green-600 text-xs tracking-widest animate-pulse">CONNECTING…</div>
+          </div>
+        );
       }
 
       const tabs = [
@@ -1291,6 +1320,7 @@
         { id: 'rankings',    emoji: '🌍', label: 'Rankings' },
         { id: 'scoring',     emoji: '📊', label: 'Scoring' },
         { id: 'leaderboard', emoji: '🏆', label: 'Ldrboard' },
+        { id: 'settings',    emoji: '⚙️',  label: 'Settings' },
       ];
 
       const draftProgress = state.picks.filter(p => p !== null).length;
@@ -1308,27 +1338,17 @@
                       <span> · {state.players[pickToPlayer(draftProgress, state.draftOrder)]} on clock</span>
                     )}
                   </div>
-                  {roomId && (
-                    <div style={{fontSize:'8px',letterSpacing:'0.15em'}} className="text-green-600 font-mono">
-                      ● LIVE · {roomId}
-                    </div>
-                  )}
+                  <div style={{fontSize:'8px',letterSpacing:'0.15em'}} className="text-green-600 font-mono">
+                    ● LIVE
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleShare}
-                  className="text-xs bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg transition-colors font-medium"
-                >
-                  Share
-                </button>
-                <button
-                  onClick={handleReset}
-                  className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  Reset
-                </button>
-              </div>
+              <button
+                onClick={handleShare}
+                className="text-xs bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg transition-colors font-medium"
+              >
+                Share
+              </button>
             </div>
 
             <nav className="flex">
@@ -1336,7 +1356,7 @@
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 py-2 flex flex-col items-center gap-0.5 text-xs font-semibold transition-colors border-b-2 ${
+                  className={`flex-1 py-2 flex flex-col items-center gap-0.5 font-semibold transition-colors border-b-2 ${
                     activeTab === tab.id
                       ? 'text-green-400 border-green-400'
                       : 'text-gray-500 border-transparent hover:text-gray-300'
@@ -1349,8 +1369,7 @@
             </nav>
           </header>
 
-          {inviteUrl && <InviteModal url={inviteUrl} players={state.players} onClose={() => setInviteUrl(null)} />}
-          {passModal && <PassModal info={passModal} roomId={roomId} onClose={() => setPassModal(null)} />}
+          {passModal && <PassModal info={passModal} roomId={FIXED_ROOM_ID} onClose={() => setPassModal(null)} />}
 
           <main className="flex-1 overflow-auto">
             {activeTab === 'draft'       && <DraftScreen       state={state} onPick={handlePick} onUndo={handleUndo} />}
@@ -1359,6 +1378,7 @@
             {activeTab === 'rankings'    && <RankingsScreen    state={state} />}
             {activeTab === 'scoring'     && <ScoringScreen     state={state} onUpdateScore={handleUpdateScore} />}
             {activeTab === 'leaderboard' && <LeaderboardScreen state={state} />}
+            {activeTab === 'settings'    && <SettingsScreen    onReset={handleReset} />}
           </main>
         </div>
       );
