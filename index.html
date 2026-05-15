@@ -1058,8 +1058,10 @@
       const [copied, setCopied] = React.useState(false);
 
       function sendToWhatsApp() {
+        const soccer  = String.fromCodePoint(0x26BD);
+        const point   = String.fromCodePoint(0x1F447);
         const names = players.join(', ');
-        const msg = `⚽ Baja Boyz WC 2026 Draft is live!\n\nPlayers: ${names}\n\nTap the link when it's your turn to pick 👇\n${url}`;
+        const msg = `${soccer} Baja Boyz WC 2026 Challenge is live!\n\nPlayers: ${names}\n\nOpen the link to follow the draft live:\n${point}\n${url}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
       }
 
@@ -1112,9 +1114,14 @@
     function PassModal({ info, roomId, onClose }) {
       function sendToWhatsApp() {
         const url = `${PAGES_URL}?room=${roomId}`;
+        const trophy  = String.fromCodePoint(0x1F3C6);
+        const soccer  = String.fromCodePoint(0x26BD);
+        const clock   = String.fromCodePoint(0x1F550);
+        const point   = String.fromCodePoint(0x1F449);
+        const flag    = info.team ? info.team.flag : '';
         const msg = info.isDone
-          ? `🏆 Baja Boyz WC 2026 Challenge complete! All 48 teams have been picked.\n\nView rosters & leaderboard:\n${url}`
-          : `⚽ Baja Boyz WC 2026 Challenge — Pick ${info.pickNum}/48\n\n${info.pickerName} just picked ${info.team.flag} ${info.team.name}!\n\n🕐 ${info.nextPlayerName}, you're on the clock!\n\n👉 Open the link:\n${url}`;
+          ? `${trophy} Baja Boyz WC 2026 Challenge complete! All 48 teams have been picked.\n\nView rosters & leaderboard:\n${url}`
+          : `${soccer} Baja Boyz WC 2026 Challenge — Pick ${info.pickNum}/48\n\n${info.pickerName} just picked ${flag} ${info.team.name}!\n\n${clock} ${info.nextPlayerName}, you're on the clock!\n\n${point} Open the link:\n${url}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
       }
 
