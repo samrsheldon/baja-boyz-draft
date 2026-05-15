@@ -1229,15 +1229,19 @@
           clearTimeout(timeout);
           const data = snap.val();
           if (data) {
-            // Firebase converts sparse arrays to objects — rebuild the 48-slot array
-            let picks = data.picks;
-            if (picks && !Array.isArray(picks)) {
+            // Firebase strips trailing nulls from arrays AND converts sparse arrays to objects.
+            // Always rebuild the full 48-slot array regardless of what shape comes back.
+            const normalizePicks = (raw) => {
               const arr = Array(48).fill(null);
-              Object.entries(picks).forEach(([k, v]) => { arr[parseInt(k)] = v || null; });
-              picks = arr;
-            }
-            if (!Array.isArray(picks) || picks.length !== 48) picks = Array(48).fill(null);
-            setState({ ...DEFAULT_DRAFT_STATE, ...data, picks });
+              if (!raw) return arr;
+              if (Array.isArray(raw)) {
+                raw.forEach((v, i) => { if (i < 48) arr[i] = v || null; });
+              } else {
+                Object.entries(raw).forEach(([k, v]) => { arr[parseInt(k)] = v || null; });
+              }
+              return arr;
+            };
+            setState({ ...DEFAULT_DRAFT_STATE, ...data, picks: normalizePicks(data.picks) });
           } else {
             ref.set(DEFAULT_DRAFT_STATE);
             setState(DEFAULT_DRAFT_STATE);
