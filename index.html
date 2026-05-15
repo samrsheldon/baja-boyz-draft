@@ -1213,13 +1213,20 @@
     function App() {
       const [state, setState]         = useState(DEFAULT_DRAFT_STATE);
       const [loading, setLoading]     = React.useState(true);
+      const [fbError, setFbError]     = React.useState(null);
       const [activeTab, setActiveTab] = React.useState('draft');
       const [passModal, setPassModal] = React.useState(null);
 
       // Connect to fixed Firebase room on mount; initialize if first run
       useEffect(() => {
         const ref = db.ref(`drafts/${FIXED_ROOM_ID}`);
+        // Timeout fallback in case Firebase rules block the connection
+        const timeout = setTimeout(() => {
+          setFbError('Could not connect to Firebase. Check that Realtime Database rules allow read/write access.');
+          setLoading(false);
+        }, 8000);
         ref.on('value', snap => {
+          clearTimeout(timeout);
           const data = snap.val();
           if (data) {
             setState({ ...DEFAULT_DRAFT_STATE, ...data });
@@ -1228,8 +1235,13 @@
             setState(DEFAULT_DRAFT_STATE);
           }
           setLoading(false);
+          setFbError(null);
+        }, err => {
+          clearTimeout(timeout);
+          setFbError(`Firebase error: ${err.message}. Go to Firebase Console → Realtime Database → Rules and set both .read and .write to true.`);
+          setLoading(false);
         });
-        return () => ref.off();
+        return () => { ref.off(); clearTimeout(timeout); };
       }, []);
 
       function writeState(newState) {
@@ -1309,6 +1321,17 @@
           <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4">
             <img src={LOGO_SRC} alt="Baja Boyz" className="w-24 opacity-60 select-none" style={{filter:'invert(1) brightness(0.7)'}} />
             <div className="text-green-600 text-xs tracking-widest animate-pulse">CONNECTING…</div>
+          </div>
+        );
+      }
+
+      if (fbError) {
+        return (
+          <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4 p-6">
+            <img src={LOGO_SRC} alt="Baja Boyz" className="w-24 opacity-40 select-none" style={{filter:'invert(1) brightness(0.7)'}} />
+            <div className="text-red-400 text-sm font-bold text-center">Connection Failed</div>
+            <div className="text-gray-500 text-xs text-center max-w-xs">{fbError}</div>
+            <button onClick={() => window.location.reload()} className="mt-2 text-xs bg-gray-800 text-gray-300 px-4 py-2 rounded-lg">Retry</button>
           </div>
         );
       }
