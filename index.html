@@ -1068,13 +1068,26 @@
 
     function InviteModal({ url, players, onClose }) {
       const [copied, setCopied] = React.useState(false);
+      const [msgCopied, setMsgCopied] = React.useState(false);
 
-      function sendToWhatsApp() {
+      function buildMsg() {
         const soccer  = String.fromCodePoint(0x26BD);
         const point   = String.fromCodePoint(0x1F447);
         const names = players.join(', ');
-        const msg = `${soccer} Baja Boyz WC 2026 Challenge is live!\n\nPlayers: ${names}\n\nOpen the link to follow the draft live:\n${point}\n${url}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+        return `${soccer} Baja Boyz WC 2026 Challenge is live!\n\nPlayers: ${names}\n\nOpen the link to follow the draft live:\n${point}\n${url}`;
+      }
+
+      function sendToWhatsApp() {
+        const msg = buildMsg();
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+        } else {
+          navigator.clipboard.writeText(msg).then(() => {
+            setMsgCopied(true);
+            setTimeout(() => setMsgCopied(false), 3000);
+          }).catch(() => prompt('Copy and paste into WhatsApp:', msg));
+        }
       }
 
       function copyLink() {
@@ -1103,7 +1116,8 @@
               onClick={sendToWhatsApp}
               className="w-full bg-[#25D366] hover:bg-[#1ebe57] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors mb-2"
             >
-              <span className="text-lg">📲</span> Send in WhatsApp
+              <span className="text-lg">📲</span>
+              {msgCopied ? '✓ Message copied — paste into WhatsApp!' : 'Send in WhatsApp'}
             </button>
 
             <button
@@ -1124,6 +1138,8 @@
     // ─── PASS MODAL ───────────────────────────────────────────────────────────
 
     function PassModal({ info, roomId, onClose }) {
+      const [msgCopied, setMsgCopied] = React.useState(false);
+
       function sendToWhatsApp() {
         const url = `${PAGES_URL}?room=${roomId}`;
         const trophy  = String.fromCodePoint(0x1F3C6);
@@ -1134,7 +1150,15 @@
         const msg = info.isDone
           ? `${trophy} Baja Boyz WC 2026 Challenge complete! All 48 teams have been picked.\n\nView rosters & leaderboard:\n${url}`
           : `${soccer} Baja Boyz WC 2026 Challenge — Pick ${info.pickNum}/48\n\n${info.pickerName} just picked ${flag} ${info.team.name}!\n\n${clock} ${info.nextPlayerName}, you're on the clock!\n\n${point} Open the link:\n${url}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+        } else {
+          navigator.clipboard.writeText(msg).then(() => {
+            setMsgCopied(true);
+            setTimeout(() => setMsgCopied(false), 3000);
+          }).catch(() => prompt('Copy and paste into WhatsApp:', msg));
+        }
       }
 
       return (
@@ -1160,7 +1184,9 @@
               className="w-full mt-5 bg-[#25D366] hover:bg-[#1ebe57] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm"
             >
               <span className="text-lg">📲</span>
-              {info.isDone ? 'Share results on WhatsApp' : 'Pass to WhatsApp group'}
+              {msgCopied
+                ? '✓ Copied — paste into WhatsApp!'
+                : info.isDone ? 'Share results on WhatsApp' : 'Pass to WhatsApp group'}
             </button>
 
             <button
