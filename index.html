@@ -299,8 +299,17 @@
     // ─── DRAFT SCREEN ─────────────────────────────────────────────────────────
 
     function DraftScreen({ state, onPick, onUndo }) {
-      const { players, draftOrder, picks } = state;
+      const { players, draftOrder } = state;
       const [confFilter, setConf] = useState('All');
+      // Firebase strips trailing nulls — always rebuild the full 48-slot array
+      const picks = (() => {
+        const raw = state.picks;
+        const arr = Array(48).fill(null);
+        if (!raw) return arr;
+        if (Array.isArray(raw)) raw.forEach((v, i) => { if (i < 48 && v) arr[i] = v; });
+        else Object.entries(raw).forEach(([k, v]) => { if (v) arr[parseInt(k)] = v; });
+        return arr;
+      })();
 
       const currentPickIdx   = picks.findIndex(p => p === null);
       const draftDone        = currentPickIdx === -1;
