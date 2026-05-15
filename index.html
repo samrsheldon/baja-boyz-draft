@@ -1276,12 +1276,12 @@
       }
 
       const tabs = [
-        { id: 'draft',       label: '📋 Draft' },
-        { id: 'rosters',     label: '👥 Rosters' },
-        { id: 'groups',      label: '🗓 Groups' },
-        { id: 'rankings',    label: '🌍 Rankings' },
-        { id: 'scoring',     label: '📊 Scoring' },
-        { id: 'leaderboard', label: '🏆 Leaderboard' },
+        { id: 'draft',       emoji: '📋', label: 'Draft' },
+        { id: 'rosters',     emoji: '👥', label: 'Rosters' },
+        { id: 'groups',      emoji: '🗓', label: 'Groups' },
+        { id: 'rankings',    emoji: '🌍', label: 'Rankings' },
+        { id: 'scoring',     emoji: '📊', label: 'Scoring' },
+        { id: 'leaderboard', emoji: '🏆', label: 'Ldrboard' },
       ];
 
       const draftProgress = state.picks.filter(p => p !== null).length;
@@ -1323,13 +1323,14 @@
                 <button
                   key={tab.id}
                   onClick={() => setTab(tab.id)}
-                  className={`flex-1 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
+                  className={`flex-1 py-2 flex flex-col items-center gap-0.5 text-xs font-semibold transition-colors border-b-2 ${
                     state.activeTab === tab.id
                       ? 'text-green-400 border-green-400'
                       : 'text-gray-500 border-transparent hover:text-gray-300'
                   }`}
                 >
-                  {tab.label}
+                  <span className="text-base leading-none">{tab.emoji}</span>
+                  <span style={{fontSize:'9px'}}>{tab.label}</span>
                 </button>
               ))}
             </nav>
