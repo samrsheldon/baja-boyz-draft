@@ -317,7 +317,8 @@
       }, [picks, draftOrder, players]);
 
       const confs = ['All', 'UEFA', 'CONMEBOL', 'CONCACAF', 'CAF', 'AFC', 'OFC', 'Playoff'];
-      const displayTeams = confFilter === 'All' ? TEAMS : TEAMS.filter(t => t.conf === confFilter);
+      const displayTeams = (confFilter === 'All' ? TEAMS : TEAMS.filter(t => t.conf === confFilter))
+        .slice().sort((a, b) => a.name.localeCompare(b.name));
 
       return (
         <div className="flex min-h-[calc(100vh-88px)]">
@@ -549,7 +550,8 @@
       const [editRound, setEditRd] = useState(ROUNDS[0]);
 
       const confs = ['All', 'UEFA', 'CONMEBOL', 'CONCACAF', 'CAF', 'AFC', 'OFC', 'Playoff'];
-      const display = confFilter === 'All' ? TEAMS : TEAMS.filter(t => t.conf === confFilter);
+      const display = (confFilter === 'All' ? TEAMS : TEAMS.filter(t => t.conf === confFilter))
+        .slice().sort((a, b) => a.name.localeCompare(b.name));
 
       function openEdit(team) {
         const s = scores[team.id] || {};
