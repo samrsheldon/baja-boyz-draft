@@ -298,7 +298,7 @@
 
     // ─── DRAFT SCREEN ─────────────────────────────────────────────────────────
 
-    function DraftScreen({ state, onPick, onUndo }) {
+    function DraftScreen({ state, onPick, onUndo, onShare }) {
       const { players, draftOrder } = state;
       const [confFilter, setConf] = useState('All');
       // Firebase strips trailing nulls — always rebuild the full 48-slot array
@@ -375,6 +375,19 @@
                         <span className="text-gray-600 truncate max-w-[40px]">
                           {players[plrIdx]?.split(' ')[0]}
                         </span>
+                        {team && onShare && (
+                          <button
+                            onClick={() => onShare({
+                              pickerName: players[plrIdx],
+                              team,
+                              nextPlayerName: pIdx + 1 < 48 ? players[pickToPlayer(pIdx + 1, draftOrder)] : null,
+                              isDone: false,
+                              pickNum: pIdx + 1,
+                            })}
+                            className="text-gray-700 hover:text-green-400 transition-colors flex-shrink-0 ml-0.5"
+                            title="Share this pick"
+                          >📤</button>
+                        )}
                       </div>
                     );
                   })}
@@ -1442,7 +1455,7 @@
           {passModal && <PassModal info={passModal} roomId={FIXED_ROOM_ID} onClose={() => setPassModal(null)} />}
 
           <main className="flex-1 overflow-auto">
-            {activeTab === 'draft'       && <DraftScreen       state={state} onPick={handlePick} onUndo={handleUndo} />}
+            {activeTab === 'draft'       && <DraftScreen       state={state} onPick={handlePick} onUndo={handleUndo} onShare={setPassModal} />}
             {activeTab === 'rosters'     && <RostersScreen     state={state} />}
             {activeTab === 'groups'      && <GroupsScreen      state={state} />}
             {activeTab === 'rankings'    && <RankingsScreen    state={state} />}
