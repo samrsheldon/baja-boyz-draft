@@ -926,21 +926,22 @@
 
           // Recent results
           let results = [];
-          if (schedRes.status === 'fulfilled' && schedRes.value?.events) {
+          if (schedRes.status === 'fulfilled' && Array.isArray(schedRes.value?.events)) {
+            const espnId = String(team.espnId);
             results = schedRes.value.events
-              .filter(e => e.status?.type?.completed)
+              .filter(e => e.status?.type?.completed === true || e.status?.type?.state === 'post')
               .slice(-8).reverse().slice(0, 6)
               .map(e => {
                 const comps = e.competitions?.[0]?.competitors || [];
-                const us   = comps.find(c => String(c.id) === String(team.espnId)) || comps[0];
-                const them = comps.find(c => String(c.id) !== String(team.espnId)) || comps[1];
+                const us   = comps.find(c => String(c.team?.id) === espnId || String(c.id) === espnId) || comps[0];
+                const them = comps.find(c => String(c.team?.id) !== espnId && String(c.id) !== espnId) || comps[1];
                 const ourScore  = parseInt(us?.score  ?? '0');
                 const theirScore = parseInt(them?.score ?? '0');
                 const result = us?.winner ? 'W' : ourScore === theirScore ? 'D' : 'L';
                 return {
                   result,
                   score: `${ourScore}–${theirScore}`,
-                  opponent: them?.team?.shortDisplayName || them?.team?.displayName || '?',
+                  opponent: them?.team?.shortDisplayName || them?.team?.displayName || them?.team?.name || '?',
                   competition: e.competitions?.[0]?.notes?.[0]?.text?.replace('International Friendly', 'Friendly') || '',
                   date: new Date(e.date).toLocaleDateString('en', { month: 'short', day: 'numeric', year: '2-digit' }),
                 };
@@ -1096,41 +1097,58 @@
 
       React.useEffect(() => {
         if (!team.espnId) return;
-        setLoad(true);
-        Promise.allSettled([
-          fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/all/teams/${team.espnId}/schedule`).then(r => r.json()),
-          fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/news?team=${team.espnId}`).then(r => r.json()),
-        ]).then(([schedRes, newsRes]) => {
-          let results = [];
-          if (schedRes.status === 'fulfilled' && schedRes.value?.events) {
-            results = schedRes.value.events
-              .filter(e => e.status?.type?.completed)
-              .slice(-8).reverse().slice(0, 6)
-              .map(e => {
-                const comps = e.competitions?.[0]?.competitors || [];
-                const us    = comps.find(c => String(c.id) === String(team.espnId)) || comps[0];
-                const them  = comps.find(c => String(c.id) !== String(team.espnId)) || comps[1];
-                const ourScore   = parseInt(us?.score  ?? '0');
-                const theirScore = parseInt(them?.score ?? '0');
-                const result = us?.winner ? 'W' : ourScore === theirScore ? 'D' : 'L';
-                return {
-                  result, score: `${ourScore}–${theirScore}`,
-                  opponent: them?.team?.shortDisplayName || them?.team?.displayName || '?',
-                  competition: e.competitions?.[0]?.notes?.[0]?.text?.replace('International Friendly', 'Friendly') || '',
-                  date: new Date(e.date).toLocaleDateString('en', { month: 'short', day: 'numeric', year: '2-digit' }),
-                };
-              });
+        let cancelled = false;
+        async function load() {
+          setLoad(true);
+          try {
+            const [schedRes, newsRes] = await Promise.allSettled([
+              fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/all/teams/${team.espnId}/schedule`).then(r => r.json()),
+              fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/news?team=${team.espnId}`).then(r => r.json()),
+            ]);
+
+            let results = [];
+            if (schedRes.status === 'fulfilled' && Array.isArray(schedRes.value?.events)) {
+              const espnId = String(team.espnId);
+              results = schedRes.value.events
+                .filter(e => e.status?.type?.completed === true || e.status?.type?.state === 'post')
+                .slice(-8).reverse().slice(0, 6)
+                .map(e => {
+                  const comps = e.competitions?.[0]?.competitors || [];
+                  // Try matching by team.id first (most reliable), then fall back to competitor id
+                  const us   = comps.find(c => String(c.team?.id) === espnId || String(c.id) === espnId) || comps[0];
+                  const them = comps.find(c => String(c.team?.id) !== espnId && String(c.id) !== espnId) || comps[1];
+                  const ourScore   = parseInt(us?.score  ?? '0');
+                  const theirScore = parseInt(them?.score ?? '0');
+                  const result = us?.winner ? 'W' : ourScore === theirScore ? 'D' : 'L';
+                  return {
+                    result,
+                    score: `${ourScore}–${theirScore}`,
+                    opponent: them?.team?.shortDisplayName || them?.team?.displayName || them?.team?.name || '?',
+                    competition: e.competitions?.[0]?.notes?.[0]?.text?.replace('International Friendly', 'Friendly') || '',
+                    date: new Date(e.date).toLocaleDateString('en', { month: 'short', day: 'numeric', year: '2-digit' }),
+                  };
+                });
+            }
+
+            let articles = [];
+            if (newsRes.status === 'fulfilled' && Array.isArray(newsRes.value?.articles)) {
+              articles = newsRes.value.articles.slice(0, 4).map(a => ({
+                headline: a.headline || a.title || '',
+                url: a.links?.web?.href || '#',
+                date: a.published ? new Date(a.published).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : '',
+              }));
+            }
+
+            if (!cancelled) setData({ results, articles });
+          } catch(err) {
+            console.warn('TeamDetailModal fetch error:', err);
+            if (!cancelled) setData({ results: [], articles: [] });
+          } finally {
+            if (!cancelled) setLoad(false);
           }
-          let articles = [];
-          if (newsRes.status === 'fulfilled' && newsRes.value?.articles) {
-            articles = newsRes.value.articles.slice(0, 4).map(a => ({
-              headline: a.headline || a.title || '',
-              url: a.links?.web?.href || '#',
-              date: a.published ? new Date(a.published).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : '',
-            }));
-          }
-          setData({ results, articles });
-        }).finally(() => setLoad(false));
+        }
+        load();
+        return () => { cancelled = true; };
       }, [team.id]);
 
       return (
