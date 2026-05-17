@@ -817,6 +817,7 @@
 
     function GroupsScreen({ state }) {
       const { players, draftOrder, picks } = state;
+      const [selectedTeam, setSelectedTeam] = React.useState(null);
 
       const pickedByName = useMemo(() => {
         const m = {};
@@ -860,8 +861,9 @@
                     return (
                       <div
                         key={team.id}
-                        className={`flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors ${
-                          drafter ? 'bg-gray-700/30' : 'bg-gray-700/50 hover:bg-gray-700'
+                        onClick={() => setSelectedTeam(team)}
+                        className={`flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors cursor-pointer ${
+                          drafter ? 'bg-gray-700/30 hover:bg-gray-700/60' : 'bg-gray-700/50 hover:bg-gray-700'
                         }`}
                       >
                         <span className={`text-lg flex-shrink-0 ${drafter ? 'opacity-40' : ''}`}>{team.flag}</span>
@@ -882,6 +884,14 @@
               </div>
             ))}
           </div>
+
+          {selectedTeam && (
+            <TeamDetailModal
+              team={selectedTeam}
+              drafter={pickedByName[selectedTeam.id]}
+              onClose={() => setSelectedTeam(null)}
+            />
+          )}
         </div>
       );
     }
@@ -1072,6 +1082,125 @@
                 </div>
               );
             })}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── TEAM DETAIL MODAL ────────────────────────────────────────────────────
+
+    function TeamDetailModal({ team, drafter, onClose }) {
+      const [data, setData]     = React.useState(null);
+      const [isLoad, setLoad]   = React.useState(false);
+      const resultColor = { W: 'bg-green-900/60 text-green-300', D: 'bg-yellow-900/60 text-yellow-300', L: 'bg-red-900/60 text-red-300' };
+
+      React.useEffect(() => {
+        if (!team.espnId) return;
+        setLoad(true);
+        Promise.allSettled([
+          fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/all/teams/${team.espnId}/schedule`).then(r => r.json()),
+          fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/news?team=${team.espnId}`).then(r => r.json()),
+        ]).then(([schedRes, newsRes]) => {
+          let results = [];
+          if (schedRes.status === 'fulfilled' && schedRes.value?.events) {
+            results = schedRes.value.events
+              .filter(e => e.status?.type?.completed)
+              .slice(-8).reverse().slice(0, 6)
+              .map(e => {
+                const comps = e.competitions?.[0]?.competitors || [];
+                const us    = comps.find(c => String(c.id) === String(team.espnId)) || comps[0];
+                const them  = comps.find(c => String(c.id) !== String(team.espnId)) || comps[1];
+                const ourScore   = parseInt(us?.score  ?? '0');
+                const theirScore = parseInt(them?.score ?? '0');
+                const result = us?.winner ? 'W' : ourScore === theirScore ? 'D' : 'L';
+                return {
+                  result, score: `${ourScore}–${theirScore}`,
+                  opponent: them?.team?.shortDisplayName || them?.team?.displayName || '?',
+                  competition: e.competitions?.[0]?.notes?.[0]?.text?.replace('International Friendly', 'Friendly') || '',
+                  date: new Date(e.date).toLocaleDateString('en', { month: 'short', day: 'numeric', year: '2-digit' }),
+                };
+              });
+          }
+          let articles = [];
+          if (newsRes.status === 'fulfilled' && newsRes.value?.articles) {
+            articles = newsRes.value.articles.slice(0, 4).map(a => ({
+              headline: a.headline || a.title || '',
+              url: a.links?.web?.href || '#',
+              date: a.published ? new Date(a.published).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : '',
+            }));
+          }
+          setData({ results, articles });
+        }).finally(() => setLoad(false));
+      }, [team.id]);
+
+      return (
+        <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4" onClick={onClose}>
+          <div
+            className="bg-gray-800 border border-gray-700 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-700 sticky top-0 bg-gray-800 z-10">
+              <span className="text-3xl">{team.flag}</span>
+              <div className="flex-1 min-w-0">
+                <div className="font-black text-white text-base leading-tight">{team.name}</div>
+                <div className="text-xs text-gray-500">
+                  Group {team.group} · <span className={CONF_COLORS[team.conf]}>{team.conf}</span>
+                  {team.rank && <span> · #{team.rank} FIFA</span>}
+                  {drafter && <span className="text-green-500 ml-1">· {drafter}</span>}
+                </div>
+              </div>
+              <button onClick={onClose} className="text-gray-500 hover:text-white text-xl leading-none flex-shrink-0">✕</button>
+            </div>
+
+            {/* Body */}
+            <div className="px-4 py-3">
+              {!team.espnId ? (
+                <p className="text-gray-600 text-xs text-center py-6">No ESPN data available for this team.</p>
+              ) : isLoad ? (
+                <p className="text-gray-500 text-xs text-center animate-pulse py-6">Loading ESPN data…</p>
+              ) : !data ? (
+                <p className="text-gray-600 text-xs text-center py-6">No data yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {/* Recent results */}
+                  <div>
+                    <div className="text-xs text-gray-400 uppercase tracking-widest mb-2">Recent Results</div>
+                    {data.results.length === 0 ? (
+                      <p className="text-gray-600 text-xs">No recent results found.</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {data.results.map((r, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs">
+                            <span className={`font-black px-1.5 py-0.5 rounded text-xs flex-shrink-0 ${resultColor[r.result]}`}>{r.result}</span>
+                            <span className="text-white font-semibold w-8 flex-shrink-0">{r.score}</span>
+                            <span className="text-gray-300 truncate flex-1">vs {r.opponent}</span>
+                            <span className="text-gray-600 flex-shrink-0">{r.date}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* News */}
+                  <div>
+                    <div className="text-xs text-gray-400 uppercase tracking-widest mb-2">Latest News</div>
+                    {data.articles.length === 0 ? (
+                      <p className="text-gray-600 text-xs">No news available.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {data.articles.map((a, i) => (
+                          <a key={i} href={a.url} target="_blank" rel="noopener"
+                             className="block text-xs text-blue-400 hover:text-blue-300 transition-colors leading-snug">
+                            {a.headline}
+                            {a.date && <span className="text-gray-600 ml-1">· {a.date}</span>}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       );
