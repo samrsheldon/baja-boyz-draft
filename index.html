@@ -921,7 +921,7 @@
         try {
           const [schedRes, newsRes] = await Promise.allSettled([
             fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/all/teams/${team.espnId}/schedule`).then(r => r.json()),
-            fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/news?team=${team.espnId}`).then(r => r.json()),
+            fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/all/news?team=${team.espnId}&limit=10`).then(r => r.json()),
           ]);
 
           // Recent results + upcoming
@@ -974,7 +974,7 @@
           // News headlines
           let articles = [];
           if (newsRes.status === 'fulfilled' && newsRes.value?.articles) {
-            articles = newsRes.value.articles.slice(0, 4).map(a => ({
+            articles = newsRes.value.articles.slice(0, 6).map(a => ({
               headline: a.headline || a.title || '',
               url: a.links?.web?.href || '#',
               date: a.published ? new Date(a.published).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : '',
@@ -1143,7 +1143,7 @@
           try {
             const [schedRes, newsRes] = await Promise.allSettled([
               fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/all/teams/${team.espnId}/schedule`).then(r => r.json()),
-              fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/news?team=${team.espnId}`).then(r => r.json()),
+              fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/all/news?team=${team.espnId}&limit=10`).then(r => r.json()),
             ]);
 
             let results = [], upcoming = [];
@@ -1193,7 +1193,7 @@
 
             let articles = [];
             if (newsRes.status === 'fulfilled' && Array.isArray(newsRes.value?.articles)) {
-              articles = newsRes.value.articles.slice(0, 4).map(a => ({
+              articles = newsRes.value.articles.slice(0, 6).map(a => ({
                 headline: a.headline || a.title || '',
                 url: a.links?.web?.href || '#',
                 date: a.published ? new Date(a.published).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : '',
