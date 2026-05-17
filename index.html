@@ -930,36 +930,41 @@
             const espnId = String(team.espnId);
             const events = schedRes.value.events;
 
+            const getScore = c => parseInt(c?.score?.displayValue ?? c?.score?.value ?? c?.score ?? 0);
+            const getStatus = e => e.competitions?.[0]?.status?.type;
+
             results = events
-              .filter(e => e.status?.type?.completed === true || e.status?.type?.state === 'post')
+              .filter(e => getStatus(e)?.completed === true || getStatus(e)?.state === 'post')
               .slice(-8).reverse().slice(0, 5)
               .map(e => {
                 const comps = e.competitions?.[0]?.competitors || [];
                 const us   = comps.find(c => String(c.team?.id) === espnId || String(c.id) === espnId) || comps[0];
                 const them = comps.find(c => String(c.team?.id) !== espnId && String(c.id) !== espnId) || comps[1];
-                const ourScore  = parseInt(us?.score  ?? '0');
-                const theirScore = parseInt(them?.score ?? '0');
+                const ourScore   = getScore(us);
+                const theirScore = getScore(them);
                 const result = us?.winner ? 'W' : ourScore === theirScore ? 'D' : 'L';
+                const league = e.competitions?.[0]?.league?.shortName || e.competitions?.[0]?.league?.name || '';
                 return {
                   result, score: `${ourScore}–${theirScore}`,
                   opponent: them?.team?.shortDisplayName || them?.team?.displayName || them?.team?.name || '?',
-                  competition: e.competitions?.[0]?.notes?.[0]?.text?.replace('International Friendly', 'Friendly') || '',
+                  competition: league.replace('International Friendly', 'Friendly'),
                   date: new Date(e.date).toLocaleDateString('en', { month: 'short', day: 'numeric', year: '2-digit' }),
                 };
               });
 
             upcoming = events
-              .filter(e => e.status?.type?.state === 'pre')
+              .filter(e => getStatus(e)?.state === 'pre')
               .slice(0, 3)
               .map(e => {
                 const comps = e.competitions?.[0]?.competitors || [];
                 const us   = comps.find(c => String(c.team?.id) === espnId || String(c.id) === espnId) || comps[0];
                 const them = comps.find(c => String(c.team?.id) !== espnId && String(c.id) !== espnId) || comps[1];
                 const d = new Date(e.date);
+                const league = e.competitions?.[0]?.league?.shortName || e.competitions?.[0]?.league?.name || '';
                 return {
                   opponent: them?.team?.shortDisplayName || them?.team?.displayName || them?.team?.name || '?',
                   isHome: us?.homeAway === 'home',
-                  competition: e.competitions?.[0]?.notes?.[0]?.text?.replace('International Friendly', 'Friendly') || '',
+                  competition: league.replace('International Friendly', 'Friendly'),
                   date: d.toLocaleDateString('en', { month: 'short', day: 'numeric' }),
                   time: d.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }),
                 };
@@ -1146,17 +1151,21 @@
               const espnId = String(team.espnId);
               const events = schedRes.value.events;
 
+              const getScore = c => parseInt(c?.score?.displayValue ?? c?.score?.value ?? c?.score ?? 0);
+              const getStatus = e => e.competitions?.[0]?.status?.type;
+
               const mapResult = e => {
                 const comps = e.competitions?.[0]?.competitors || [];
                 const us   = comps.find(c => String(c.team?.id) === espnId || String(c.id) === espnId) || comps[0];
                 const them = comps.find(c => String(c.team?.id) !== espnId && String(c.id) !== espnId) || comps[1];
-                const ourScore   = parseInt(us?.score  ?? '0');
-                const theirScore = parseInt(them?.score ?? '0');
+                const ourScore   = getScore(us);
+                const theirScore = getScore(them);
                 const result = us?.winner ? 'W' : ourScore === theirScore ? 'D' : 'L';
+                const league = e.competitions?.[0]?.league?.shortName || e.competitions?.[0]?.league?.name || '';
                 return {
                   result, score: `${ourScore}–${theirScore}`,
                   opponent: them?.team?.shortDisplayName || them?.team?.displayName || them?.team?.name || '?',
-                  competition: e.competitions?.[0]?.notes?.[0]?.text?.replace('International Friendly', 'Friendly') || '',
+                  competition: league.replace('International Friendly', 'Friendly'),
                   date: new Date(e.date).toLocaleDateString('en', { month: 'short', day: 'numeric', year: '2-digit' }),
                 };
               };
@@ -1166,18 +1175,19 @@
                 const us   = comps.find(c => String(c.team?.id) === espnId || String(c.id) === espnId) || comps[0];
                 const them = comps.find(c => String(c.team?.id) !== espnId && String(c.id) !== espnId) || comps[1];
                 const d = new Date(e.date);
+                const league = e.competitions?.[0]?.league?.shortName || e.competitions?.[0]?.league?.name || '';
                 return {
                   opponent: them?.team?.shortDisplayName || them?.team?.displayName || them?.team?.name || '?',
                   isHome: us?.homeAway === 'home',
-                  competition: e.competitions?.[0]?.notes?.[0]?.text?.replace('International Friendly', 'Friendly') || '',
+                  competition: league.replace('International Friendly', 'Friendly'),
                   date: d.toLocaleDateString('en', { month: 'short', day: 'numeric' }),
                   time: d.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }),
                 };
               };
 
-              results  = events.filter(e => e.status?.type?.completed === true || e.status?.type?.state === 'post')
+              results  = events.filter(e => getStatus(e)?.completed === true || getStatus(e)?.state === 'post')
                                .slice(-8).reverse().slice(0, 5).map(mapResult);
-              upcoming = events.filter(e => e.status?.type?.state === 'pre')
+              upcoming = events.filter(e => getStatus(e)?.state === 'pre')
                                .slice(0, 3).map(mapUpcoming);
             }
 
