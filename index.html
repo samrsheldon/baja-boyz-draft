@@ -167,6 +167,7 @@
     const FIXED_ROOM_ID  = 'BAJAWC26';
     const FIXED_PLAYERS  = ['Bucklinho','Garrinho','Paulinho','Saminho','Elliottinho','Claudinho','Zakinho','Fellinho'];
     const FIXED_AI_IDX   = 5;
+    const DRAFT_DEADLINE = new Date('2026-06-11T19:00:00.000Z'); // 1:00 PM CST — Mexico kick-off
 
     const DEFAULT_DRAFT_STATE = {
       phase: 'draft',
@@ -1441,9 +1442,47 @@
 
     // ─── SETTINGS SCREEN ─────────────────────────────────────────────────────
 
-    function SettingsScreen({ onReset }) {
+    function SettingsScreen({ onReset, autoFilled }) {
+      const [now, setNow] = React.useState(Date.now());
+      React.useEffect(() => {
+        const t = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(t);
+      }, []);
+
+      const deadline = DRAFT_DEADLINE.getTime();
+      const msLeft   = deadline - now;
+      const isPast   = msLeft <= 0;
+
+      function formatCountdown(ms) {
+        if (ms <= 0) return null;
+        const h = Math.floor(ms / 3600000);
+        const m = Math.floor((ms % 3600000) / 60000);
+        const s = Math.floor((ms % 60000) / 1000);
+        return `${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+      }
+
       return (
         <div className="p-4 max-w-lg mx-auto space-y-6">
+
+          {/* Auto-fill deadline */}
+          <div>
+            <h2 className="text-white font-black text-lg mb-1">Auto-fill Deadline</h2>
+            <p className="text-gray-500 text-xs mb-3">
+              Any unpicked slots will be auto-filled with the best available team by FIFA ranking the moment the first match kicks off.
+            </p>
+            <div className={`rounded-xl px-4 py-3 border ${autoFilled ? 'bg-green-900/30 border-green-700' : isPast ? 'bg-yellow-900/30 border-yellow-700' : 'bg-gray-900 border-gray-800'}`}>
+              <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Mexico kick-off · June 11</div>
+              <div className="text-white font-bold text-base">1:00 PM CST</div>
+              {autoFilled ? (
+                <div className="mt-2 text-green-400 text-xs font-semibold">✓ Auto-fill has run — all picks complete</div>
+              ) : isPast ? (
+                <div className="mt-2 text-yellow-400 text-xs font-semibold">⚡ Deadline passed — auto-fill will trigger on next app load</div>
+              ) : (
+                <div className="mt-2 text-blue-400 text-sm font-mono font-bold">{formatCountdown(msLeft)}</div>
+              )}
+            </div>
+          </div>
+
           <div>
             <h2 className="text-white font-black text-lg mb-1">Draft Order</h2>
             <p className="text-gray-500 text-xs mb-3">Snake format · 8 players · 6 rounds · 48 picks</p>
@@ -1532,6 +1571,44 @@
         setState(newState);
         db.ref(`drafts/${FIXED_ROOM_ID}`).set(newState);
       }
+
+      // Keep a ref to latest state so deadline timer always reads fresh data
+      const stateRef = React.useRef(state);
+      React.useEffect(() => { stateRef.current = state; }, [state]);
+
+      function performAutoFill(s) {
+        if (s.autoFilled) return;
+        const picks = [...s.picks];
+        if (!picks.some(p => p === null)) return;
+        const pickedSet = new Set(picks.filter(Boolean));
+        const remaining = [...TEAMS]
+          .filter(t => !pickedSet.has(t.id))
+          .sort((a, b) => (a.rank || 999) - (b.rank || 999));
+        let ri = 0;
+        for (let i = 0; i < 48; i++) {
+          if (picks[i] === null && ri < remaining.length) {
+            picks[i] = remaining[ri++].id;
+          }
+        }
+        writeState({ ...s, picks, autoFilled: true });
+      }
+
+      // If app is already open when deadline hits, fire auto-fill at that exact moment
+      React.useEffect(() => {
+        if (loading) return;
+        const delay = DRAFT_DEADLINE.getTime() - Date.now();
+        if (delay <= 0) return; // Already past — handled by the state-based effect below
+        const timer = setTimeout(() => performAutoFill(stateRef.current), delay);
+        return () => clearTimeout(timer);
+      }, [loading]);
+
+      // If app is opened after the deadline has already passed, auto-fill on load
+      React.useEffect(() => {
+        if (loading || state.autoFilled) return;
+        if (Date.now() < DRAFT_DEADLINE.getTime()) return;
+        if (!state.picks.some(p => p === null)) return;
+        performAutoFill(state);
+      }, [state.picks, state.autoFilled, loading]);
 
       // Claudinho AI auto-pick
       useEffect(() => {
@@ -1685,7 +1762,7 @@
             {activeTab === 'rankings'    && <RankingsScreen    state={state} />}
             {activeTab === 'scoring'     && <ScoringScreen     state={state} onUpdateScore={handleUpdateScore} />}
             {activeTab === 'leaderboard' && <LeaderboardScreen state={state} />}
-            {activeTab === 'settings'    && <SettingsScreen    onReset={handleReset} />}
+            {activeTab === 'settings'    && <SettingsScreen    onReset={handleReset} autoFilled={!!state.autoFilled} />}
           </main>
         </div>
       );
