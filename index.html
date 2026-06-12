@@ -61,65 +61,65 @@
 
     const TEAMS = [
       // Group A
-      { id: 'MEX', name: 'Mexico',           flag: '🇲🇽', conf: 'CONCACAF', group: 'A', rank: 15, espnId: 472  },
-      { id: 'RSA', name: 'South Africa',     flag: '🇿🇦', conf: 'CAF',      group: 'A', rank: 60, espnId: 4686 },
-      { id: 'KOR', name: 'Korea Republic',   flag: '🇰🇷', conf: 'AFC',      group: 'A', rank: 25, espnId: 528  },
-      { id: 'CZE', name: 'Czechia',          flag: '🇨🇿', conf: 'UEFA',     group: 'A', rank: 41, espnId: 382  },
+      { id: 'MEX', name: 'Mexico',           flag: '🇲🇽', conf: 'CONCACAF', group: 'A', rank: 15, espnId: 203   },
+      { id: 'RSA', name: 'South Africa',     flag: '🇿🇦', conf: 'CAF',      group: 'A', rank: 60, espnId: 467   },
+      { id: 'KOR', name: 'Korea Republic',   flag: '🇰🇷', conf: 'AFC',      group: 'A', rank: 25, espnId: 451   },
+      { id: 'CZE', name: 'Czechia',          flag: '🇨🇿', conf: 'UEFA',     group: 'A', rank: 41, espnId: 450   },
       // Group B
-      { id: 'CAN', name: 'Canada',           flag: '🇨🇦', conf: 'CONCACAF', group: 'B', rank: 30, espnId: 356  },
-      { id: 'BIH', name: 'Bosnia & Herz.',   flag: '🇧🇦', conf: 'UEFA',     group: 'B', rank: 65, espnId: 453  },
-      { id: 'QAT', name: 'Qatar',            flag: '🇶🇦', conf: 'AFC',      group: 'B', rank: 55, espnId: 3948 },
-      { id: 'SUI', name: 'Switzerland',      flag: '🇨🇭', conf: 'UEFA',     group: 'B', rank: 19, espnId: 167  },
+      { id: 'CAN', name: 'Canada',           flag: '🇨🇦', conf: 'CONCACAF', group: 'B', rank: 30, espnId: 206   },
+      { id: 'BIH', name: 'Bosnia & Herz.',   flag: '🇧🇦', conf: 'UEFA',     group: 'B', rank: 65, espnId: 452   },
+      { id: 'QAT', name: 'Qatar',            flag: '🇶🇦', conf: 'AFC',      group: 'B', rank: 55, espnId: 4398  },
+      { id: 'SUI', name: 'Switzerland',      flag: '🇨🇭', conf: 'UEFA',     group: 'B', rank: 19, espnId: 475   },
       // Group C
-      { id: 'BRA', name: 'Brazil',           flag: '🇧🇷', conf: 'CONMEBOL', group: 'C', rank: 6,  espnId: 205  },
-      { id: 'MAR', name: 'Morocco',          flag: '🇲🇦', conf: 'CAF',      group: 'C', rank: 8,  espnId: 624  },
-      { id: 'HAI', name: 'Haiti',            flag: '🇭🇹', conf: 'CONCACAF', group: 'C', rank: 83, espnId: 509  },
-      { id: 'SCO', name: 'Scotland',         flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', conf: 'UEFA',     group: 'C', rank: 43, espnId: 269  },
+      { id: 'BRA', name: 'Brazil',           flag: '🇧🇷', conf: 'CONMEBOL', group: 'C', rank: 6,  espnId: 205   },
+      { id: 'MAR', name: 'Morocco',          flag: '🇲🇦', conf: 'CAF',      group: 'C', rank: 8,  espnId: 2869  },
+      { id: 'HAI', name: 'Haiti',            flag: '🇭🇹', conf: 'CONCACAF', group: 'C', rank: 83, espnId: 2654  },
+      { id: 'SCO', name: 'Scotland',         flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', conf: 'UEFA',     group: 'C', rank: 43, espnId: 580   },
       // Group D
-      { id: 'USA', name: 'United States',    flag: '🇺🇸', conf: 'CONCACAF', group: 'D', rank: 16, espnId: 284  },
-      { id: 'PAR', name: 'Paraguay',         flag: '🇵🇾', conf: 'CONMEBOL', group: 'D', rank: 40, espnId: 492  },
-      { id: 'AUS', name: 'Australia',        flag: '🇦🇺', conf: 'AFC',      group: 'D', rank: 27, espnId: 218  },
-      { id: 'TUR', name: 'Türkiye',          flag: '🇹🇷', conf: 'UEFA',     group: 'D', rank: 22, espnId: 475  },
+      { id: 'USA', name: 'United States',    flag: '🇺🇸', conf: 'CONCACAF', group: 'D', rank: 16, espnId: 660   },
+      { id: 'PAR', name: 'Paraguay',         flag: '🇵🇾', conf: 'CONMEBOL', group: 'D', rank: 40, espnId: 210   },
+      { id: 'AUS', name: 'Australia',        flag: '🇦🇺', conf: 'AFC',      group: 'D', rank: 27, espnId: 628   },
+      { id: 'TUR', name: 'Türkiye',          flag: '🇹🇷', conf: 'UEFA',     group: 'D', rank: 22, espnId: 465   },
       // Group E
-      { id: 'GER', name: 'Germany',          flag: '🇩🇪', conf: 'UEFA',     group: 'E', rank: 10, espnId: 481  },
-      { id: 'CUW', name: 'Curaçao',          flag: '🇨🇼', conf: 'CONCACAF', group: 'E', rank: 82, espnId: null },
-      { id: 'CIV', name: "Côte d'Ivoire",    flag: '🇨🇮', conf: 'CAF',      group: 'E', rank: 34, espnId: 606  },
-      { id: 'ECU', name: 'Ecuador',          flag: '🇪🇨', conf: 'CONMEBOL', group: 'E', rank: 23, espnId: 485  },
+      { id: 'GER', name: 'Germany',          flag: '🇩🇪', conf: 'UEFA',     group: 'E', rank: 10, espnId: 481   },
+      { id: 'CUW', name: 'Curaçao',          flag: '🇨🇼', conf: 'CONCACAF', group: 'E', rank: 82, espnId: 11678 },
+      { id: 'CIV', name: "Côte d'Ivoire",    flag: '🇨🇮', conf: 'CAF',      group: 'E', rank: 34, espnId: 4789  },
+      { id: 'ECU', name: 'Ecuador',          flag: '🇪🇨', conf: 'CONMEBOL', group: 'E', rank: 23, espnId: 209   },
       // Group F
-      { id: 'NED', name: 'Netherlands',      flag: '🇳🇱', conf: 'UEFA',     group: 'F', rank: 7,  espnId: 449  },
-      { id: 'JPN', name: 'Japan',            flag: '🇯🇵', conf: 'AFC',      group: 'F', rank: 18, espnId: 519  },
-      { id: 'SWE', name: 'Sweden',           flag: '🇸🇪', conf: 'UEFA',     group: 'F', rank: 38, espnId: 277  },
-      { id: 'TUN', name: 'Tunisia',          flag: '🇹🇳', conf: 'CAF',      group: 'F', rank: 44, espnId: 660  },
+      { id: 'NED', name: 'Netherlands',      flag: '🇳🇱', conf: 'UEFA',     group: 'F', rank: 7,  espnId: 449   },
+      { id: 'JPN', name: 'Japan',            flag: '🇯🇵', conf: 'AFC',      group: 'F', rank: 18, espnId: 627   },
+      { id: 'SWE', name: 'Sweden',           flag: '🇸🇪', conf: 'UEFA',     group: 'F', rank: 38, espnId: 466   },
+      { id: 'TUN', name: 'Tunisia',          flag: '🇹🇳', conf: 'CAF',      group: 'F', rank: 44, espnId: 659   },
       // Group G
-      { id: 'BEL', name: 'Belgium',          flag: '🇧🇪', conf: 'UEFA',     group: 'G', rank: 9,  espnId: 470  },
-      { id: 'EGY', name: 'Egypt',            flag: '🇪🇬', conf: 'CAF',      group: 'G', rank: 29, espnId: 612  },
-      { id: 'IRN', name: 'IR Iran',          flag: '🇮🇷', conf: 'AFC',      group: 'G', rank: 21, espnId: 516  },
-      { id: 'NZL', name: 'New Zealand',      flag: '🇳🇿', conf: 'OFC',      group: 'G', rank: 85, espnId: 232  },
+      { id: 'BEL', name: 'Belgium',          flag: '🇧🇪', conf: 'UEFA',     group: 'G', rank: 9,  espnId: 459   },
+      { id: 'EGY', name: 'Egypt',            flag: '🇪🇬', conf: 'CAF',      group: 'G', rank: 29, espnId: 2620  },
+      { id: 'IRN', name: 'IR Iran',          flag: '🇮🇷', conf: 'AFC',      group: 'G', rank: 21, espnId: 469   },
+      { id: 'NZL', name: 'New Zealand',      flag: '🇳🇿', conf: 'OFC',      group: 'G', rank: 85, espnId: 2666  },
       // Group H
-      { id: 'ESP', name: 'Spain',            flag: '🇪🇸', conf: 'UEFA',     group: 'H', rank: 2,  espnId: 164  },
-      { id: 'CPV', name: 'Cabo Verde',       flag: '🇨🇻', conf: 'CAF',      group: 'H', rank: 69, espnId: null },
-      { id: 'KSA', name: 'Saudi Arabia',     flag: '🇸🇦', conf: 'AFC',      group: 'H', rank: 61, espnId: 536  },
-      { id: 'URU', name: 'Uruguay',          flag: '🇺🇾', conf: 'CONMEBOL', group: 'H', rank: 17, espnId: 492  },
+      { id: 'ESP', name: 'Spain',            flag: '🇪🇸', conf: 'UEFA',     group: 'H', rank: 2,  espnId: 164   },
+      { id: 'CPV', name: 'Cabo Verde',       flag: '🇨🇻', conf: 'CAF',      group: 'H', rank: 69, espnId: 2597  },
+      { id: 'KSA', name: 'Saudi Arabia',     flag: '🇸🇦', conf: 'AFC',      group: 'H', rank: 61, espnId: 655   },
+      { id: 'URU', name: 'Uruguay',          flag: '🇺🇾', conf: 'CONMEBOL', group: 'H', rank: 17, espnId: 212   },
       // Group I
-      { id: 'FRA', name: 'France',           flag: '🇫🇷', conf: 'UEFA',     group: 'I', rank: 1,  espnId: 478  },
-      { id: 'SEN', name: 'Senegal',          flag: '🇸🇳', conf: 'CAF',      group: 'I', rank: 14, espnId: 644  },
-      { id: 'IRQ', name: 'Iraq',             flag: '🇮🇶', conf: 'AFC',      group: 'I', rank: 57, espnId: 517  },
-      { id: 'NOR', name: 'Norway',           flag: '🇳🇴', conf: 'UEFA',     group: 'I', rank: 31, espnId: 270  },
+      { id: 'FRA', name: 'France',           flag: '🇫🇷', conf: 'UEFA',     group: 'I', rank: 1,  espnId: 478   },
+      { id: 'SEN', name: 'Senegal',          flag: '🇸🇳', conf: 'CAF',      group: 'I', rank: 14, espnId: 654   },
+      { id: 'IRQ', name: 'Iraq',             flag: '🇮🇶', conf: 'AFC',      group: 'I', rank: 57, espnId: 4375  },
+      { id: 'NOR', name: 'Norway',           flag: '🇳🇴', conf: 'UEFA',     group: 'I', rank: 31, espnId: 464   },
       // Group J
-      { id: 'ARG', name: 'Argentina',        flag: '🇦🇷', conf: 'CONMEBOL', group: 'J', rank: 3,  espnId: 202  },
-      { id: 'ALG', name: 'Algeria',          flag: '🇩🇿', conf: 'CAF',      group: 'J', rank: 28, espnId: 600  },
-      { id: 'AUT', name: 'Austria',          flag: '🇦🇹', conf: 'UEFA',     group: 'J', rank: 24, espnId: 454  },
-      { id: 'JOR', name: 'Jordan',           flag: '🇯🇴', conf: 'AFC',      group: 'J', rank: 63, espnId: 521  },
+      { id: 'ARG', name: 'Argentina',        flag: '🇦🇷', conf: 'CONMEBOL', group: 'J', rank: 3,  espnId: 202   },
+      { id: 'ALG', name: 'Algeria',          flag: '🇩🇿', conf: 'CAF',      group: 'J', rank: 28, espnId: 624   },
+      { id: 'AUT', name: 'Austria',          flag: '🇦🇹', conf: 'UEFA',     group: 'J', rank: 24, espnId: 474   },
+      { id: 'JOR', name: 'Jordan',           flag: '🇯🇴', conf: 'AFC',      group: 'J', rank: 63, espnId: 2917  },
       // Group K
-      { id: 'POR', name: 'Portugal',         flag: '🇵🇹', conf: 'UEFA',     group: 'K', rank: 5,  espnId: 491  },
-      { id: 'COD', name: 'Congo DR',         flag: '🇨🇩', conf: 'CAF',      group: 'K', rank: 46, espnId: null },
-      { id: 'UZB', name: 'Uzbekistan',       flag: '🇺🇿', conf: 'AFC',      group: 'K', rank: 50, espnId: null },
-      { id: 'COL', name: 'Colombia',         flag: '🇨🇴', conf: 'CONMEBOL', group: 'K', rank: 13, espnId: 476  },
+      { id: 'POR', name: 'Portugal',         flag: '🇵🇹', conf: 'UEFA',     group: 'K', rank: 5,  espnId: 482   },
+      { id: 'COD', name: 'Congo DR',         flag: '🇨🇩', conf: 'CAF',      group: 'K', rank: 46, espnId: 2850  },
+      { id: 'UZB', name: 'Uzbekistan',       flag: '🇺🇿', conf: 'AFC',      group: 'K', rank: 50, espnId: 2570  },
+      { id: 'COL', name: 'Colombia',         flag: '🇨🇴', conf: 'CONMEBOL', group: 'K', rank: 13, espnId: 208   },
       // Group L
-      { id: 'ENG', name: 'England',          flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', conf: 'UEFA',     group: 'L', rank: 4,  espnId: 448  },
-      { id: 'CRO', name: 'Croatia',          flag: '🇭🇷', conf: 'UEFA',     group: 'L', rank: 11, espnId: 457  },
-      { id: 'GHA', name: 'Ghana',            flag: '🇬🇭', conf: 'CAF',      group: 'L', rank: 74, espnId: 614  },
-      { id: 'PAN', name: 'Panama',           flag: '🇵🇦', conf: 'CONCACAF', group: 'L', rank: 33, espnId: 518  },
+      { id: 'ENG', name: 'England',          flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', conf: 'UEFA',     group: 'L', rank: 4,  espnId: 448   },
+      { id: 'CRO', name: 'Croatia',          flag: '🇭🇷', conf: 'UEFA',     group: 'L', rank: 11, espnId: 477   },
+      { id: 'GHA', name: 'Ghana',            flag: '🇬🇭', conf: 'CAF',      group: 'L', rank: 74, espnId: 4469  },
+      { id: 'PAN', name: 'Panama',           flag: '🇵🇦', conf: 'CONCACAF', group: 'L', rank: 33, espnId: 2659  },
     ];
 
     // 2026 format: 12 groups → R32 → R16 → QF → SF → Final + Bronze
@@ -145,20 +145,26 @@
       'Champion':     55,
     };
 
-    // Maps ESPN season slugs → our ROUNDS values
-    const ESPN_SLUG_TO_ROUND = {
-      'group-stage':       'Eliminated (Group Stage)',
-      'round-of-32':       'Round of 32',
-      'round-32':          'Round of 32',
-      'round-of-16':       'Round of 16',
-      'round-16':          'Round of 16',
+    // Maps ESPN seasonType.name (lower-cased) → our ROUNDS values.
+    // The fifa.world schedule exposes the round on event.seasonType.name
+    // (e.g. "Group Stage", "Round of 32", "Quarterfinals"); season.slug is null.
+    const ESPN_ROUND_NAME_TO_ROUND = {
+      'group stage':       'Eliminated (Group Stage)',
+      'round of 32':       'Round of 32',
+      'round of 16':       'Round of 16',
       'quarterfinals':     'Quarterfinal',
       'quarterfinal':      'Quarterfinal',
       'semifinals':        'Semifinal',
       'semifinal':         'Semifinal',
+      'third place':       '3rd Place',
       'third-place':       '3rd Place',
-      '3rd-place-match':   '3rd Place',
+      '3rd place':         '3rd Place',
       'final':             'Runner-up', // overridden to Champion if winner===true
+    };
+    // Ordering used to pick the furthest round a team reached
+    const ROUND_ORDER = {
+      'Eliminated (Group Stage)': 0, 'Round of 32': 1, 'Round of 16': 2,
+      'Quarterfinal': 3, 'Semifinal': 4, '3rd Place': 5, 'Runner-up': 6, 'Champion': 7,
     };
 
     const CONF_COLORS = {
@@ -609,6 +615,8 @@
           const newScores = { ...scores };
           let updated = 0;
 
+          const roundOf = e => ESPN_ROUND_NAME_TO_ROUND[(e.seasonType?.name || '').toLowerCase()] || null;
+
           for (const result of fetched) {
             if (result.status !== 'fulfilled') continue;
             const { team, events } = result.value;
@@ -620,8 +628,8 @@
             );
             if (completed.length === 0) continue;
 
-            // Group stage points
-            const groupMatches = completed.filter(e => e.season?.slug === 'group-stage');
+            // Group stage points (3 win / 1 draw)
+            const groupMatches = completed.filter(e => roundOf(e) === 'Eliminated (Group Stage)');
             let groupPoints = 0;
             for (const e of groupMatches) {
               const comps = e.competitions?.[0]?.competitors || [];
@@ -634,17 +642,22 @@
               else if (ourScore === theirScore) groupPoints += 1;
             }
 
-            // Furthest round reached
+            // Furthest round reached = deepest knockout match they appear in
             let roundReached = 'Eliminated (Group Stage)';
-            const knockoutMatches = completed.filter(e => e.season?.slug !== 'group-stage');
-            if (knockoutMatches.length > 0) {
-              const last = knockoutMatches[knockoutMatches.length - 1];
-              const slug = last.season?.slug || '';
-              roundReached = ESPN_SLUG_TO_ROUND[slug] || 'Round of 32';
-              if (slug === 'final') {
-                const comps = last.competitions?.[0]?.competitors || [];
+            let deepest = null;
+            for (const e of completed) {
+              const r = roundOf(e);
+              if (!r || r === 'Eliminated (Group Stage)') continue;
+              if (deepest === null || ROUND_ORDER[r] > ROUND_ORDER[deepest]) deepest = r;
+            }
+            if (deepest) {
+              roundReached = deepest;
+              // If they won the Final, they're the Champion (else Runner-up)
+              const finalMatch = completed.find(e => roundOf(e) === 'Runner-up');
+              if (finalMatch) {
+                const comps = finalMatch.competitions?.[0]?.competitors || [];
                 const us = comps.find(c => String(c.team?.id) === eid || String(c.id) === eid);
-                if (us?.winner) roundReached = 'Champion';
+                if (us?.winner || us?.score?.winner) roundReached = 'Champion';
               }
             }
 
