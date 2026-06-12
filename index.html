@@ -130,6 +130,7 @@
       'Quarterfinal',
       'Semifinal',
       '3rd Place',
+      'Runner-up',
       'Champion',
     ];
 
@@ -140,7 +141,24 @@
       'Quarterfinal': 22,
       'Semifinal':    32,
       '3rd Place':    38,
+      'Runner-up':    45,
       'Champion':     55,
+    };
+
+    // Maps ESPN season slugs → our ROUNDS values
+    const ESPN_SLUG_TO_ROUND = {
+      'group-stage':       'Eliminated (Group Stage)',
+      'round-of-32':       'Round of 32',
+      'round-32':          'Round of 32',
+      'round-of-16':       'Round of 16',
+      'round-16':          'Round of 16',
+      'quarterfinals':     'Quarterfinal',
+      'quarterfinal':      'Quarterfinal',
+      'semifinals':        'Semifinal',
+      'semifinal':         'Semifinal',
+      'third-place':       '3rd Place',
+      '3rd-place-match':   '3rd Place',
+      'final':             'Runner-up', // overridden to Champion if winner===true
     };
 
     const CONF_COLORS = {
@@ -566,12 +584,83 @@
 
     // ─── SCORING SCREEN ───────────────────────────────────────────────────────
 
-    function ScoringScreen({ state, onUpdateScore }) {
+    function ScoringScreen({ state, onUpdateScore, onBulkUpdate }) {
       const { scores } = state;
       const [confFilter, setConf] = useState('All');
       const [editing, setEditing] = useState(null);
       const [editGP, setEditGP]   = useState(0);
       const [editRound, setEditRd] = useState(ROUNDS[0]);
+      const [syncing, setSyncing] = React.useState(false);
+      const [syncMsg, setSyncMsg] = React.useState('');
+
+      async function syncFromESPN() {
+        setSyncing(true);
+        setSyncMsg('');
+        try {
+          const teamsToFetch = TEAMS.filter(t => t.espnId);
+          const fetched = await Promise.allSettled(
+            teamsToFetch.map(t =>
+              fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/teams/${t.espnId}/schedule`)
+                .then(r => r.json())
+                .then(data => ({ team: t, events: data.events || [] }))
+            )
+          );
+
+          const newScores = { ...scores };
+          let updated = 0;
+
+          for (const result of fetched) {
+            if (result.status !== 'fulfilled') continue;
+            const { team, events } = result.value;
+            const eid = String(team.espnId);
+
+            const completed = events.filter(e =>
+              e.competitions?.[0]?.status?.type?.completed === true ||
+              e.competitions?.[0]?.status?.type?.state === 'post'
+            );
+            if (completed.length === 0) continue;
+
+            // Group stage points
+            const groupMatches = completed.filter(e => e.season?.slug === 'group-stage');
+            let groupPoints = 0;
+            for (const e of groupMatches) {
+              const comps = e.competitions?.[0]?.competitors || [];
+              const us   = comps.find(c => String(c.team?.id) === eid || String(c.id) === eid);
+              const them = comps.find(c => String(c.team?.id) !== eid && String(c.id) !== eid);
+              if (!us) continue;
+              const ourScore   = parseInt(us?.score?.displayValue   ?? us?.score?.value   ?? 0);
+              const theirScore = parseInt(them?.score?.displayValue  ?? them?.score?.value  ?? 0);
+              if (ourScore > theirScore)      groupPoints += 3;
+              else if (ourScore === theirScore) groupPoints += 1;
+            }
+
+            // Furthest round reached
+            let roundReached = 'Eliminated (Group Stage)';
+            const knockoutMatches = completed.filter(e => e.season?.slug !== 'group-stage');
+            if (knockoutMatches.length > 0) {
+              const last = knockoutMatches[knockoutMatches.length - 1];
+              const slug = last.season?.slug || '';
+              roundReached = ESPN_SLUG_TO_ROUND[slug] || 'Round of 32';
+              if (slug === 'final') {
+                const comps = last.competitions?.[0]?.competitors || [];
+                const us = comps.find(c => String(c.team?.id) === eid || String(c.id) === eid);
+                if (us?.winner) roundReached = 'Champion';
+              }
+            }
+
+            newScores[team.id] = { groupPoints, roundReached };
+            updated++;
+          }
+
+          onBulkUpdate(newScores);
+          setSyncMsg(`✓ ${updated} team${updated !== 1 ? 's' : ''} updated from ESPN`);
+        } catch (err) {
+          setSyncMsg(`Error: ${err.message}`);
+          console.error(err);
+        } finally {
+          setSyncing(false);
+        }
+      }
 
       const confs = ['All', 'UEFA', 'CONMEBOL', 'CONCACAF', 'CAF', 'AFC', 'OFC', 'Playoff'];
       const display = (confFilter === 'All' ? TEAMS : TEAMS.filter(t => t.conf === confFilter))
@@ -598,8 +687,27 @@
             <span className="text-xs text-gray-500 mt-1">{entered}/48 entered</span>
           </div>
 
+          <div className="flex items-center gap-3 mb-3">
+            <button
+              onClick={syncFromESPN}
+              disabled={syncing}
+              className="flex items-center gap-2 bg-blue-700 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors"
+            >
+              {syncing ? (
+                <><span className="animate-spin inline-block">⟳</span> Syncing…</>
+              ) : (
+                <>⚡ Sync from ESPN</>
+              )}
+            </button>
+            {syncMsg && (
+              <span className={`text-xs ${syncMsg.startsWith('✓') ? 'text-green-400' : 'text-red-400'}`}>
+                {syncMsg}
+              </span>
+            )}
+          </div>
+
           <div className="text-xs text-gray-500 mb-1">
-            Click any team to enter their group stage points (0–9) and the furthest round they reached.
+            Sync pulls live WC results from ESPN. You can also click any team to edit manually.
           </div>
           <div className="text-xs text-gray-600 mb-4">
             Round bonuses: R32 <span className="text-gray-400">+8</span> · R16 <span className="text-gray-400">+14</span> · QF <span className="text-gray-400">+22</span> · SF <span className="text-gray-400">+32</span> · Bronze <span className="text-gray-400">+38</span> · Champion <span className="text-gray-400">+55</span>
@@ -1665,6 +1773,10 @@
         writeState({ ...state, scores: { ...state.scores, [teamId]: data } });
       }
 
+      function handleBulkUpdateScores(newScores) {
+        writeState({ ...state, scores: newScores });
+      }
+
       function handleShare() {
         navigator.clipboard.writeText(PAGES_URL)
           .then(() => alert('Link copied! Send it to the WhatsApp group.'))
@@ -1760,7 +1872,7 @@
             {activeTab === 'rosters'     && <RostersScreen     state={state} />}
             {activeTab === 'groups'      && <GroupsScreen      state={state} />}
             {activeTab === 'rankings'    && <RankingsScreen    state={state} />}
-            {activeTab === 'scoring'     && <ScoringScreen     state={state} onUpdateScore={handleUpdateScore} />}
+            {activeTab === 'scoring'     && <ScoringScreen     state={state} onUpdateScore={handleUpdateScore} onBulkUpdate={handleBulkUpdateScores} />}
             {activeTab === 'leaderboard' && <LeaderboardScreen state={state} />}
             {activeTab === 'settings'    && <SettingsScreen    onReset={handleReset} autoFilled={!!state.autoFilled} />}
           </main>
