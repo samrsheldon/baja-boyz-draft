@@ -1728,7 +1728,7 @@
 
     // ─── SETTINGS SCREEN ─────────────────────────────────────────────────────
 
-    function SettingsScreen({ onReset, autoFilled }) {
+    function SettingsScreen({ autoFilled }) {
       const [now, setNow] = React.useState(Date.now());
       React.useEffect(() => {
         const t = setInterval(() => setNow(Date.now()), 1000);
@@ -1791,16 +1791,6 @@
             <div className="bg-gray-900 rounded-xl px-4 py-3 font-mono text-xs text-green-400 break-all">{PAGES_URL}</div>
           </div>
 
-          <div>
-            <h2 className="text-red-400 font-black text-lg mb-1">Danger Zone</h2>
-            <p className="text-gray-500 text-xs mb-3">Reset wipes all picks and scores and cannot be undone.</p>
-            <button
-              onClick={onReset}
-              className="w-full bg-red-900/40 hover:bg-red-800/60 text-red-400 hover:text-red-300 font-bold py-3 rounded-xl transition-colors text-sm border border-red-900"
-            >
-              Reset Draft
-            </button>
-          </div>
         </div>
       );
     }
@@ -2053,7 +2043,7 @@
             {activeTab === 'rankings'    && <RankingsScreen    state={state} />}
             {activeTab === 'scoring'     && <ScoringScreen     state={state} onUpdateScore={handleUpdateScore} onBulkUpdate={handleBulkUpdateScores} />}
             {activeTab === 'leaderboard' && <LeaderboardScreen state={state} />}
-            {activeTab === 'settings'    && <SettingsScreen    onReset={handleReset} autoFilled={!!state.autoFilled} />}
+            {activeTab === 'settings'    && <SettingsScreen    autoFilled={!!state.autoFilled} />}
           </main>
         </div>
       );
