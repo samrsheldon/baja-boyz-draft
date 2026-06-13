@@ -1646,7 +1646,7 @@
       const [state, setState]         = useState(DEFAULT_DRAFT_STATE);
       const [loading, setLoading]     = React.useState(true);
       const [fbError, setFbError]     = React.useState(null);
-      const [activeTab, setActiveTab] = React.useState('draft');
+      const [activeTab, setActiveTab] = React.useState('leaderboard');
       const [passModal, setPassModal] = React.useState(null);
 
       // Connect to fixed Firebase room on mount; initialize if first run
@@ -1823,12 +1823,11 @@
       }
 
       const tabs = [
-        { id: 'draft',       emoji: '📋', label: 'Draft' },
+        { id: 'leaderboard', emoji: '🏆', label: 'Ldrboard' },
         { id: 'rosters',     emoji: '👥', label: 'Rosters' },
         { id: 'groups',      emoji: '🗓', label: 'Groups' },
         { id: 'rankings',    emoji: '🌍', label: 'Rankings' },
         { id: 'scoring',     emoji: '📊', label: 'Scoring' },
-        { id: 'leaderboard', emoji: '🏆', label: 'Ldrboard' },
         { id: 'settings',    emoji: '⚙️',  label: 'Settings' },
       ];
 
