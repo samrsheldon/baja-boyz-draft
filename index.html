@@ -1107,14 +1107,23 @@
       const [loading, setLoading] = React.useState(true);
       const [error, setError]     = React.useState('');
       const [lightbox, setLightbox] = React.useState(null);
+      const [filter, setFilter]   = React.useState('All');
+
+      const teamOptions = React.useMemo(
+        () => TEAMS.filter(t => t.espnId).slice().sort((a, b) => a.name.localeCompare(b.name)),
+        []
+      );
 
       React.useEffect(() => {
         let cancelled = false;
         (async () => {
           setLoading(true); setError('');
           try {
-            const data = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/news?limit=50')
-              .then(r => r.json());
+            const team = filter !== 'All' ? TEAM_BY_ID[filter] : null;
+            const url = team
+              ? `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/news?team=${team.espnId}&limit=40`
+              : 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/news?limit=50';
+            const data = await fetch(url).then(r => r.json());
             const seen = new Set();
             const out = [];
             for (const a of (data.articles || [])) {
@@ -1143,7 +1152,7 @@
           }
         })();
         return () => { cancelled = true; };
-      }, []);
+      }, [filter]);
 
       return (
         <div className="p-4 md:p-6 max-w-5xl mx-auto">
@@ -1151,7 +1160,20 @@
             <h2 className="text-xl font-black text-white">Match Gallery</h2>
             {photos && <span className="text-xs text-gray-500">{photos.length} photos</span>}
           </div>
-          <p className="text-xs text-gray-500 mb-5">Latest World Cup photos via ESPN · tap to enlarge</p>
+          <p className="text-xs text-gray-500 mb-3">Latest World Cup photos via ESPN · tap to enlarge</p>
+
+          <div className="mb-5">
+            <select
+              value={filter}
+              onChange={e => setFilter(e.target.value)}
+              className="bg-gray-800 border border-gray-700 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-green-500 cursor-pointer"
+            >
+              <option value="All">📸 All teams</option>
+              {teamOptions.map(t => (
+                <option key={t.id} value={t.id}>{t.flag} {t.name}</option>
+              ))}
+            </select>
+          </div>
 
           {loading && <p className="text-gray-500 text-sm">Loading photos…</p>}
           {error && <p className="text-red-400 text-sm">Error: {error}</p>}
