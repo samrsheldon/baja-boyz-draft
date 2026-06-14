@@ -12,7 +12,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyC-PqWLpmhERwaI8k4LRZfoqMAw4MPcJgs",
@@ -25,12 +24,6 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const auth = firebase.auth();
-    // Sign in anonymously so DB rules can require auth != null.
-    // authReady resolves once a user token exists; data access waits on it.
-    const authReady = auth.signInAnonymously()
-      .then(() => auth.currentUser)
-      .catch(err => { console.error('Anonymous auth failed:', err); throw err; });
   </script>
   <style>
     @keyframes glow {
@@ -1959,15 +1952,11 @@
       // Connect to fixed Firebase room on mount; initialize if first run
       useEffect(() => {
         const ref = db.ref(`drafts/${FIXED_ROOM_ID}`);
-        let cancelled = false;
         // Timeout fallback in case Firebase rules block the connection
         const timeout = setTimeout(() => {
           setFbError('Could not connect to Firebase. Check that Realtime Database rules allow read/write access.');
           setLoading(false);
         }, 8000);
-        // Wait for anonymous sign-in before reading/writing (rules require auth)
-        authReady.then(() => {
-          if (cancelled) return;
         ref.on('value', snap => {
           clearTimeout(timeout);
           const data = snap.val();
@@ -1993,16 +1982,10 @@
           setFbError(null);
         }, err => {
           clearTimeout(timeout);
-          setFbError(`Firebase error: ${err.message}. Check Realtime Database rules and that the Anonymous sign-in provider is enabled.`);
+          setFbError(`Firebase error: ${err.message}. Go to Firebase Console → Realtime Database → Rules and set both .read and .write to true.`);
           setLoading(false);
         });
-        }).catch(() => {
-          if (cancelled) return;
-          clearTimeout(timeout);
-          setFbError('Could not sign in. In Firebase Console → Authentication → Sign-in method, enable the Anonymous provider.');
-          setLoading(false);
-        });
-        return () => { cancelled = true; ref.off(); clearTimeout(timeout); };
+        return () => { ref.off(); clearTimeout(timeout); };
       }, []);
 
       function writeState(newState) {
