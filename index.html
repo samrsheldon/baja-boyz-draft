@@ -1103,7 +1103,7 @@
     // ─── GROUPS SCREEN ────────────────────────────────────────────────────────
 
     function GroupsScreen({ state }) {
-      const { players, draftOrder, picks } = state;
+      const { players, draftOrder, picks, scores } = state;
       const [selectedTeam, setSelectedTeam] = React.useState(null);
 
       const pickedByName = useMemo(() => {
@@ -1114,24 +1114,36 @@
         return m;
       }, [picks, draftOrder, players]);
 
+      const gp = team => scores?.[team.id]?.groupPoints || 0;
+
       const grouped = useMemo(() => {
         const g = {};
         TEAMS.forEach(t => {
           if (!g[t.group]) g[t.group] = [];
           g[t.group].push(t);
         });
+        // Sort each group by group-stage points (standings), tiebreak by FIFA rank
+        Object.values(g).forEach(arr => arr.sort((a, b) =>
+          gp(b) - gp(a) || (a.rank || 999) - (b.rank || 999)
+        ));
         return g;
-      }, []);
+      }, [scores]);
 
       const GROUP_LABELS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
       const drafted = picks.filter(p => p !== null).length;
+      const anyPoints = scores && Object.values(scores).some(s => (s?.groupPoints || 0) > 0);
 
       return (
         <div className="p-4 md:p-6 max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xl font-black text-white">Group Stage Draw</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xl font-black text-white">Group Stage Standings</h2>
             <span className="text-xs text-gray-500">{drafted}/48 teams drafted</span>
           </div>
+          <p className="text-xs text-gray-500 mb-4">
+            {anyPoints
+              ? <><span className="text-green-500 font-bold">Green</span> = top 2 (advancing) · ordered by points · sync results on the Scoring tab</>
+              : <>Standings update once results are synced on the Scoring tab.</>}
+          </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {GROUP_LABELS.map(grp => (
@@ -1143,8 +1155,9 @@
                   </span>
                 </div>
                 <div className="p-2 space-y-1">
-                  {grouped[grp]?.map(team => {
+                  {grouped[grp]?.map((team, i) => {
                     const drafter = pickedByName[team.id];
+                    const pts = gp(team);
                     return (
                       <div
                         key={team.id}
@@ -1153,6 +1166,7 @@
                           drafter ? 'bg-gray-700/30 hover:bg-gray-700/60' : 'bg-gray-700/50 hover:bg-gray-700'
                         }`}
                       >
+                        <span className={`w-3 flex-shrink-0 text-center font-mono text-[11px] font-bold ${i < 2 ? 'text-green-500' : 'text-gray-600'}`}>{i + 1}</span>
                         <span className="text-lg flex-shrink-0">{team.flag}</span>
                         <div className="flex-1 min-w-0">
                           <div className={`text-xs truncate ${drafter ? 'font-bold text-white' : 'font-semibold text-white'}`}>
@@ -1163,6 +1177,10 @@
                           ) : (
                             <div className={`text-xs ${CONF_COLORS[team.conf]}`}>{team.conf}</div>
                           )}
+                        </div>
+                        <div className="flex-shrink-0 text-right leading-none">
+                          <div className={`text-sm font-black ${pts > 0 ? 'text-white' : 'text-gray-600'}`}>{pts}</div>
+                          <div className="text-[9px] text-gray-500 uppercase tracking-wide">pts</div>
                         </div>
                       </div>
                     );
