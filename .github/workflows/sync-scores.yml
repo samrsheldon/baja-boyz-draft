@@ -1,10 +1,12 @@
 name: Sync WC scores
 
 # Auto-syncs ESPN results into Firebase so scores stay current even when
-# nobody has the app open. Runs every 2 hours (UTC) plus on-demand.
+# nobody has the app open. WC 2026 kickoffs run 16:00–04:00 UTC, so matches
+# finish ~18:00–06:00 UTC. Sync every 2h across that window (catches each
+# full-time within ~2h) and skip the match-free daytime (06:00–16:00 UTC).
 on:
   schedule:
-    - cron: "0 */2 * * *"
+    - cron: "0 18,20,22,0,2,4,6 * * *"
   workflow_dispatch: {}
 
 # Avoid overlapping runs if one is slow
