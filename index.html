@@ -1100,6 +1100,111 @@
     }
 
 
+    // ─── GALLERY SCREEN ───────────────────────────────────────────────────────
+
+    function GalleryScreen() {
+      const [photos, setPhotos]   = React.useState(null);
+      const [loading, setLoading] = React.useState(true);
+      const [error, setError]     = React.useState('');
+      const [lightbox, setLightbox] = React.useState(null);
+
+      React.useEffect(() => {
+        let cancelled = false;
+        (async () => {
+          setLoading(true); setError('');
+          try {
+            const data = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/news?limit=50')
+              .then(r => r.json());
+            const seen = new Set();
+            const out = [];
+            for (const a of (data.articles || [])) {
+              const link = a.links?.web?.href || a.links?.mobile?.href || null;
+              for (const im of (a.images || [])) {
+                const url = im.url || '';
+                // Real editorial photos only (skip video/motion thumbnails)
+                if (!url.includes('/photo/') || seen.has(url)) continue;
+                seen.add(url);
+                out.push({
+                  url,
+                  caption: im.caption || a.headline || im.name || '',
+                  credit: im.credit || '',
+                  headline: a.headline || '',
+                  date: a.published ? new Date(a.published) : null,
+                  link,
+                });
+              }
+            }
+            out.sort((x, y) => (y.date?.getTime() || 0) - (x.date?.getTime() || 0));
+            if (!cancelled) setPhotos(out);
+          } catch (err) {
+            if (!cancelled) setError(err.message || 'Failed to load photos');
+          } finally {
+            if (!cancelled) setLoading(false);
+          }
+        })();
+        return () => { cancelled = true; };
+      }, []);
+
+      return (
+        <div className="p-4 md:p-6 max-w-5xl mx-auto">
+          <div className="flex items-baseline justify-between mb-1">
+            <h2 className="text-xl font-black text-white">Match Gallery</h2>
+            {photos && <span className="text-xs text-gray-500">{photos.length} photos</span>}
+          </div>
+          <p className="text-xs text-gray-500 mb-5">Latest World Cup photos via ESPN · tap to enlarge</p>
+
+          {loading && <p className="text-gray-500 text-sm">Loading photos…</p>}
+          {error && <p className="text-red-400 text-sm">Error: {error}</p>}
+          {!loading && !error && photos && photos.length === 0 && (
+            <p className="text-gray-500 text-sm">No photos available right now.</p>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+            {(photos || []).map((p, i) => (
+              <button
+                key={i}
+                onClick={() => setLightbox(p)}
+                className="group relative aspect-video rounded-xl overflow-hidden bg-gray-800 border border-gray-700 hover:border-green-500 transition-colors"
+              >
+                <img src={p.url} alt={p.caption} loading="lazy"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-2 pt-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <p className="text-white text-[11px] font-semibold leading-snug line-clamp-2">{p.caption}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {lightbox && (
+            <div
+              className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+              onClick={() => setLightbox(null)}
+            >
+              <button
+                onClick={() => setLightbox(null)}
+                className="absolute top-4 right-4 text-white/70 hover:text-white text-3xl leading-none w-10 h-10 flex items-center justify-center"
+              >×</button>
+              <div className="max-w-4xl w-full" onClick={e => e.stopPropagation()}>
+                <img src={lightbox.url} alt={lightbox.caption}
+                  className="w-full max-h-[75vh] object-contain rounded-lg" />
+                <div className="mt-3 text-center">
+                  <p className="text-white text-sm font-semibold">{lightbox.caption}</p>
+                  {lightbox.credit && <p className="text-gray-500 text-xs mt-1">{lightbox.credit}</p>}
+                  {lightbox.link && (
+                    <a href={lightbox.link} target="_blank" rel="noopener noreferrer"
+                      className="inline-block mt-2 text-green-400 hover:text-green-300 text-xs font-bold">
+                      Read on ESPN →
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+
     // ─── GROUPS SCREEN ────────────────────────────────────────────────────────
 
     function GroupsScreen({ state }) {
@@ -2001,6 +2106,7 @@
         { id: 'rosters',     emoji: '👥', label: 'Rosters' },
         { id: 'groups',      emoji: '🗓', label: 'Groups' },
         { id: 'rankings',    emoji: '🌍', label: 'Rankings' },
+        { id: 'gallery',     emoji: '📸', label: 'Gallery' },
         { id: 'scoring',     emoji: '📊', label: 'Scoring' },
         { id: 'settings',    emoji: '⚙️',  label: 'Settings' },
       ];
@@ -2059,6 +2165,7 @@
             {activeTab === 'rosters'     && <RostersScreen     state={state} />}
             {activeTab === 'groups'      && <GroupsScreen      state={state} />}
             {activeTab === 'rankings'    && <RankingsScreen    state={state} />}
+            {activeTab === 'gallery'     && <GalleryScreen     />}
             {activeTab === 'scoring'     && <ScoringScreen     state={state} onUpdateScore={handleUpdateScore} onBulkUpdate={handleBulkUpdateScores} />}
             {activeTab === 'leaderboard' && <LeaderboardScreen state={state} />}
             {activeTab === 'settings'    && <SettingsScreen    autoFilled={!!state.autoFilled} />}
