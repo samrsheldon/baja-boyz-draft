@@ -1,0 +1,25 @@
+name: Sync WC scores
+
+# Auto-syncs ESPN results into Firebase so scores stay current even when
+# nobody has the app open. Runs every 2 hours (UTC) plus on-demand.
+on:
+  schedule:
+    - cron: "0 */2 * * *"
+  workflow_dispatch: {}
+
+# Avoid overlapping runs if one is slow
+concurrency:
+  group: sync-scores
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Sync scores from ESPN to Firebase
+        run: python3 sync_scores.py
