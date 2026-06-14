@@ -593,6 +593,75 @@
       );
     }
 
+    // Shared ESPN score sync — fetches every team's WC schedule, computes group
+    // points + furthest round, and returns merged scores. Used by both the
+    // Scoring screen and the Settings manual-sync button.
+    async function fetchESPNScores(currentScores) {
+      const teamsToFetch = TEAMS.filter(t => t.espnId);
+      const fetched = await Promise.allSettled(
+        teamsToFetch.map(t =>
+          fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/teams/${t.espnId}/schedule`)
+            .then(r => r.json())
+            .then(data => ({ team: t, events: data.events || [] }))
+        )
+      );
+
+      const newScores = { ...currentScores };
+      let updated = 0;
+      const roundOf = e => ESPN_ROUND_NAME_TO_ROUND[(e.seasonType?.name || '').toLowerCase()] || null;
+
+      for (const result of fetched) {
+        if (result.status !== 'fulfilled') continue;
+        const { team, events } = result.value;
+        const eid = String(team.espnId);
+
+        const completed = events.filter(e =>
+          e.competitions?.[0]?.status?.type?.completed === true ||
+          e.competitions?.[0]?.status?.type?.state === 'post'
+        );
+        if (completed.length === 0) continue;
+
+        // Group stage points (3 win / 1 draw)
+        const groupMatches = completed.filter(e => roundOf(e) === 'Eliminated (Group Stage)');
+        let groupPoints = 0;
+        for (const e of groupMatches) {
+          const comps = e.competitions?.[0]?.competitors || [];
+          const us   = comps.find(c => String(c.team?.id) === eid || String(c.id) === eid);
+          const them = comps.find(c => String(c.team?.id) !== eid && String(c.id) !== eid);
+          if (!us) continue;
+          const ourScore   = parseInt(us?.score?.displayValue   ?? us?.score?.value   ?? 0);
+          const theirScore = parseInt(them?.score?.displayValue  ?? them?.score?.value  ?? 0);
+          if (ourScore > theirScore)      groupPoints += 3;
+          else if (ourScore === theirScore) groupPoints += 1;
+        }
+
+        // Furthest round reached = deepest knockout match they appear in
+        let roundReached = 'Eliminated (Group Stage)';
+        let deepest = null;
+        for (const e of completed) {
+          const r = roundOf(e);
+          if (!r || r === 'Eliminated (Group Stage)') continue;
+          if (deepest === null || ROUND_ORDER[r] > ROUND_ORDER[deepest]) deepest = r;
+        }
+        if (deepest) {
+          roundReached = deepest;
+          // If they won the Final, they're the Champion (else Runner-up)
+          const finalMatch = completed.find(e => roundOf(e) === 'Runner-up');
+          if (finalMatch) {
+            const comps = finalMatch.competitions?.[0]?.competitors || [];
+            const us = comps.find(c => String(c.team?.id) === eid || String(c.id) === eid);
+            if (us?.winner || us?.score?.winner) roundReached = 'Champion';
+          }
+        }
+
+        newScores[team.id] = { groupPoints, roundReached };
+        updated++;
+      }
+
+      return { newScores, updated };
+    }
+
+
     // ─── SCORING SCREEN ───────────────────────────────────────────────────────
 
     function ScoringScreen({ state, onUpdateScore, onBulkUpdate }) {
@@ -608,68 +677,7 @@
         setSyncing(true);
         setSyncMsg('');
         try {
-          const teamsToFetch = TEAMS.filter(t => t.espnId);
-          const fetched = await Promise.allSettled(
-            teamsToFetch.map(t =>
-              fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/teams/${t.espnId}/schedule`)
-                .then(r => r.json())
-                .then(data => ({ team: t, events: data.events || [] }))
-            )
-          );
-
-          const newScores = { ...scores };
-          let updated = 0;
-
-          const roundOf = e => ESPN_ROUND_NAME_TO_ROUND[(e.seasonType?.name || '').toLowerCase()] || null;
-
-          for (const result of fetched) {
-            if (result.status !== 'fulfilled') continue;
-            const { team, events } = result.value;
-            const eid = String(team.espnId);
-
-            const completed = events.filter(e =>
-              e.competitions?.[0]?.status?.type?.completed === true ||
-              e.competitions?.[0]?.status?.type?.state === 'post'
-            );
-            if (completed.length === 0) continue;
-
-            // Group stage points (3 win / 1 draw)
-            const groupMatches = completed.filter(e => roundOf(e) === 'Eliminated (Group Stage)');
-            let groupPoints = 0;
-            for (const e of groupMatches) {
-              const comps = e.competitions?.[0]?.competitors || [];
-              const us   = comps.find(c => String(c.team?.id) === eid || String(c.id) === eid);
-              const them = comps.find(c => String(c.team?.id) !== eid && String(c.id) !== eid);
-              if (!us) continue;
-              const ourScore   = parseInt(us?.score?.displayValue   ?? us?.score?.value   ?? 0);
-              const theirScore = parseInt(them?.score?.displayValue  ?? them?.score?.value  ?? 0);
-              if (ourScore > theirScore)      groupPoints += 3;
-              else if (ourScore === theirScore) groupPoints += 1;
-            }
-
-            // Furthest round reached = deepest knockout match they appear in
-            let roundReached = 'Eliminated (Group Stage)';
-            let deepest = null;
-            for (const e of completed) {
-              const r = roundOf(e);
-              if (!r || r === 'Eliminated (Group Stage)') continue;
-              if (deepest === null || ROUND_ORDER[r] > ROUND_ORDER[deepest]) deepest = r;
-            }
-            if (deepest) {
-              roundReached = deepest;
-              // If they won the Final, they're the Champion (else Runner-up)
-              const finalMatch = completed.find(e => roundOf(e) === 'Runner-up');
-              if (finalMatch) {
-                const comps = finalMatch.competitions?.[0]?.competitors || [];
-                const us = comps.find(c => String(c.team?.id) === eid || String(c.id) === eid);
-                if (us?.winner || us?.score?.winner) roundReached = 'Champion';
-              }
-            }
-
-            newScores[team.id] = { groupPoints, roundReached };
-            updated++;
-          }
-
+          const { newScores, updated } = await fetchESPNScores(scores);
           onBulkUpdate(newScores);
           setSyncMsg(`✓ ${updated} team${updated !== 1 ? 's' : ''} updated from ESPN`);
         } catch (err) {
@@ -1873,12 +1881,29 @@
 
     // ─── SETTINGS SCREEN ─────────────────────────────────────────────────────
 
-    function SettingsScreen({ autoFilled }) {
+    function SettingsScreen({ autoFilled, scores, onBulkUpdate }) {
       const [now, setNow] = React.useState(Date.now());
       React.useEffect(() => {
         const t = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(t);
       }, []);
+
+      const [syncing, setSyncing] = React.useState(false);
+      const [syncMsg, setSyncMsg] = React.useState('');
+      async function syncFromESPN() {
+        setSyncing(true);
+        setSyncMsg('');
+        try {
+          const { newScores, updated } = await fetchESPNScores(scores || {});
+          onBulkUpdate(newScores);
+          setSyncMsg(`✓ ${updated} team${updated !== 1 ? 's' : ''} updated from ESPN`);
+        } catch (err) {
+          setSyncMsg(`Error: ${err.message}`);
+          console.error(err);
+        } finally {
+          setSyncing(false);
+        }
+      }
 
       const deadline = DRAFT_DEADLINE.getTime();
       const msLeft   = deadline - now;
@@ -1894,6 +1919,28 @@
 
       return (
         <div className="p-4 max-w-lg mx-auto space-y-6">
+
+          {/* Manual score sync */}
+          <div>
+            <h2 className="text-white font-black text-lg mb-1">Scores</h2>
+            <p className="text-gray-500 text-xs mb-3">
+              Scores auto-sync from ESPN every ~2 hours. Use this to pull the latest results right now.
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={syncFromESPN}
+                disabled={syncing}
+                className="flex items-center gap-2 bg-blue-700 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-colors"
+              >
+                {syncing
+                  ? <><span className="animate-spin inline-block">⟳</span> Syncing…</>
+                  : <>⚡ Sync from ESPN</>}
+              </button>
+              {syncMsg && (
+                <span className={`text-xs ${syncMsg.startsWith('✓') ? 'text-green-400' : 'text-red-400'}`}>{syncMsg}</span>
+              )}
+            </div>
+          </div>
 
           {/* Auto-fill deadline */}
           <div>
@@ -2192,7 +2239,7 @@
             {activeTab === 'gallery'     && <GalleryScreen     />}
             {activeTab === 'scoring'     && <ScoringScreen     state={state} onUpdateScore={handleUpdateScore} onBulkUpdate={handleBulkUpdateScores} />}
             {activeTab === 'leaderboard' && <LeaderboardScreen state={state} />}
-            {activeTab === 'settings'    && <SettingsScreen    autoFilled={!!state.autoFilled} />}
+            {activeTab === 'settings'    && <SettingsScreen    autoFilled={!!state.autoFilled} scores={state.scores} onBulkUpdate={handleBulkUpdateScores} />}
           </main>
         </div>
       );
