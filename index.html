@@ -67,6 +67,10 @@
     .intro-bar { background: linear-gradient(90deg, transparent, #4ade80, transparent); animation: intro-bar 1.4s ease-in-out infinite; }
     @keyframes intro-out { to { opacity: 0; visibility: hidden; } }
     .intro-out { animation: intro-out 0.6s ease forwards; }
+    @keyframes trophy-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+    .trophy-float { animation: trophy-float 6.5s ease-in-out infinite; }
+    @keyframes trophy-sheen { 0%,100% { opacity: 0.18; } 50% { opacity: 0.5; } }
+    .trophy-sheen { animation: trophy-sheen 3.5s ease-in-out infinite; }
     body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
     .baja-wordmark {
       font-family: 'Libre Baskerville', Georgia, serif;
@@ -2138,9 +2142,42 @@
       return (
         <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden bg-gray-950 ${fading ? 'intro-out' : ''}`}>
           <div className="absolute inset-0 intro-bg" />
-          {/* giant spinning ball glowing behind the mark */}
-          <div className="absolute select-none opacity-[0.08]" style={{ fontSize: '40vh', lineHeight: 1 }}>
-            <span className="intro-ball inline-block">⚽️</span>
+          {/* soft gold glow behind the trophy */}
+          <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 50% 44%, rgba(212,175,55,0.12), transparent 56%)' }} />
+          {/* World Cup trophy silhouette looming large in the background */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none trophy-float">
+            <svg viewBox="0 0 200 360" className="h-[90vh] max-h-[820px] w-auto">
+              <defs>
+                <linearGradient id="bajaGold" x1="0.15" y1="0" x2="0.85" y2="1">
+                  <stop offset="0" stopColor="#fdf0b8" />
+                  <stop offset="0.4" stopColor="#e8c75e" />
+                  <stop offset="0.72" stopColor="#c89a3a" />
+                  <stop offset="1" stopColor="#8f6f22" />
+                </linearGradient>
+              </defs>
+              {/* trophy silhouette: bulbous globe, concave taper, flared base */}
+              <path
+                fill="url(#bajaGold)" fillOpacity="0.17"
+                stroke="url(#bajaGold)" strokeOpacity="0.5" strokeWidth="1.4" strokeLinejoin="round"
+                d="M100 16 C124 14 146 44 150 92 C152 120 146 140 134 150 C128 160 126 168 126 178
+                   C124 210 112 250 114 286 C115 301 124 311 132 320 L132 348 L68 348 L68 320
+                   C76 311 85 301 86 286 C88 250 76 210 74 178 C74 168 72 160 66 150
+                   C54 140 48 120 50 92 C54 44 76 14 100 16 Z"
+              />
+              {/* interior detail — globe + the two figures' seam */}
+              <g stroke="url(#bajaGold)" strokeOpacity="0.4" strokeWidth="1" fill="none" strokeLinecap="round">
+                <ellipse cx="100" cy="86" rx="46" ry="17" />
+                <ellipse cx="100" cy="82" rx="17" ry="48" />
+                <path d="M100 150 C97 200 103 252 100 304" />
+                <path d="M70 330 L130 330 M69 340 L131 340" />
+              </g>
+              {/* shimmering gold highlights — the upraised arms + a glint on the globe */}
+              <g stroke="#fdf0b8" strokeWidth="1.5" fill="none" strokeLinecap="round" className="trophy-sheen">
+                <path d="M82 206 C88 168 94 150 100 138" />
+                <path d="M118 206 C112 168 106 150 100 138" />
+                <path d="M70 60 C80 46 100 44 116 52" strokeWidth="2" />
+              </g>
+            </svg>
           </div>
 
           <div className="relative flex flex-col items-center px-6 text-center">
