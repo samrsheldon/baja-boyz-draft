@@ -2131,7 +2131,10 @@
     // ─── INTRO PREROLL SPLASH ─────────────────────────────────────────────────
 
     function IntroSplash({ fading }) {
-      const flags = ['🇲🇽','🇨🇦','🇺🇸','🇧🇷','🇦🇷','🇫🇷','🇪🇸','🇩🇪','🇵🇹','🇳🇱'];
+      // The 8 players' round-1 (#1) draft picks, in draft order
+      const flags = ['ESP','ENG','GER','ARG','FRA','POR','BRA','SWE']
+        .map(id => TEAM_BY_ID[id]?.flag)
+        .filter(Boolean);
       return (
         <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden bg-gray-950 ${fading ? 'intro-out' : ''}`}>
           <div className="absolute inset-0 intro-bg" />
@@ -2180,11 +2183,15 @@
       const [fbError, setFbError]     = React.useState(null);
       const [activeTab, setActiveTab] = React.useState('leaderboard');
       const [passModal, setPassModal] = React.useState(null);
-      const [showIntro, setShowIntro]   = React.useState(true);
+      const [showIntro, setShowIntro]   = React.useState(() => {
+        try { return !sessionStorage.getItem('bajaIntroSeen'); } catch { return true; }
+      });
       const [introFading, setIntroFading] = React.useState(false);
 
-      // Preroll splash: play ~2.6s, fade for 0.6s, then reveal the app
+      // Preroll splash: play once per browser session (~2.6s, fade 0.6s), then reveal
       React.useEffect(() => {
+        if (!showIntro) return;
+        try { sessionStorage.setItem('bajaIntroSeen', '1'); } catch {}
         const fade = setTimeout(() => setIntroFading(true), 2600);
         const done = setTimeout(() => setShowIntro(false), 3200);
         return () => { clearTimeout(fade); clearTimeout(done); };
