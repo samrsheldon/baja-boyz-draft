@@ -1073,8 +1073,20 @@
             return {
               flag: t?.flag || '', name: t?.name || c?.team?.shortDisplayName || c?.team?.displayName || '?',
               owner: t ? ownerByTeamId[t.id] : null,
-              score: c?.score?.displayValue ?? c?.score?.value ?? '',
+              score: c?.score?.displayValue ?? c?.score?.value ?? c?.score ?? '',
             };
+          };
+          // A quick one-line take on a finished match
+          const commentary = (a, h) => {
+            const ag = parseInt(a.score) || 0, hg = parseInt(h.score) || 0;
+            const total = ag + hg, margin = Math.abs(ag - hg);
+            const win = ag > hg ? a : h;
+            if (margin === 0) return total === 0 ? 'Goalless stalemate — a point apiece. 🤝' : `Honors even in a ${total}-goal share. 🤝`;
+            if (margin >= 4) return `${win.name} run riot! 🔥`;
+            if (margin === 3) return `${win.name} cruise to a commanding win. 💪`;
+            if (total >= 4)   return `${win.name} edge a goal-fest. ⚡`;
+            if (total === 0 || (ag + hg) === 1) return `${win.name} grind out a 1–0. 🧱`;
+            return `${win.name} take all three points. ✅`;
           };
           const sides = e => {
             const cs = e.competitions?.[0]?.competitors || [];
@@ -1107,7 +1119,8 @@
             for (const e of done) {
               const { home, away } = sides(e); const a = info(away), h = info(home);
               lines.push(`⚽️ ${a.flag} ${a.name} ${a.score}–${h.score} ${h.name} ${h.flag}`);
-              lines.push(`     ${a.owner || '—'} / ${h.owner || '—'}`);
+              lines.push(`     ${commentary(a, h)}`);
+              lines.push(`     (${a.owner || '—'} / ${h.owner || '—'})`);
             }
             lines.push('');
           }
