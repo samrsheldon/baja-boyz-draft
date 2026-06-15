@@ -31,6 +31,42 @@
       50%       { box-shadow: 0 0 12px 4px rgba(74, 222, 128, 0.7); }
     }
     .on-clock-card { animation: glow 1.8s ease-in-out infinite; }
+
+    /* ── Intro preroll splash ─────────────────────────────── */
+    .intro-bg {
+      background:
+        radial-gradient(circle at 50% 38%, rgba(34,197,94,0.22), transparent 58%),
+        radial-gradient(circle at 50% 110%, rgba(13,148,136,0.18), transparent 55%);
+    }
+    @keyframes intro-pop {
+      0%   { opacity: 0; transform: scale(0.55) translateY(8px); }
+      60%  { opacity: 1; transform: scale(1.07) translateY(0); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    .intro-pop { animation: intro-pop 0.85s cubic-bezier(0.2,0.8,0.2,1) both; }
+    @keyframes intro-rise {
+      0%   { opacity: 0; transform: translateY(16px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .intro-rise { animation: intro-rise 0.6s ease-out both; }
+    @keyframes intro-flag {
+      0%   { opacity: 0; transform: translateY(10px) scale(0.4); }
+      70%  { opacity: 1; transform: translateY(-3px) scale(1.12); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .intro-flag { display: inline-block; animation: intro-flag 0.55s cubic-bezier(0.2,0.8,0.2,1) both; }
+    @keyframes intro-ball {
+      0%   { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .intro-ball { animation: intro-ball 7s linear infinite; }
+    @keyframes intro-bar {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .intro-bar { background: linear-gradient(90deg, transparent, #4ade80, transparent); animation: intro-bar 1.4s ease-in-out infinite; }
+    @keyframes intro-out { to { opacity: 0; visibility: hidden; } }
+    .intro-out { animation: intro-out 0.6s ease forwards; }
     body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
     .baja-wordmark {
       font-family: 'Libre Baskerville', Georgia, serif;
@@ -2092,6 +2128,50 @@
       );
     }
 
+    // ─── INTRO PREROLL SPLASH ─────────────────────────────────────────────────
+
+    function IntroSplash({ fading }) {
+      const flags = ['🇲🇽','🇨🇦','🇺🇸','🇧🇷','🇦🇷','🇫🇷','🇪🇸','🇩🇪','🇵🇹','🇳🇱'];
+      return (
+        <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden bg-gray-950 ${fading ? 'intro-out' : ''}`}>
+          <div className="absolute inset-0 intro-bg" />
+          {/* giant spinning ball glowing behind the mark */}
+          <div className="absolute select-none opacity-[0.08]" style={{ fontSize: '40vh', lineHeight: 1 }}>
+            <span className="intro-ball inline-block">⚽️</span>
+          </div>
+
+          <div className="relative flex flex-col items-center px-6 text-center">
+            <img
+              src={LOGO_SRC}
+              alt="Baja Boyz"
+              className="w-40 sm:w-48 mb-4 intro-pop select-none"
+              style={{ filter: 'invert(1) brightness(0.95)' }}
+            />
+            <div className="baja-wordmark text-white text-2xl sm:text-3xl intro-rise" style={{ animationDelay: '0.35s' }}>
+              BAJA BOYZ
+            </div>
+            <div className="baja-sub text-green-400 text-[11px] sm:text-xs mt-1.5 intro-rise" style={{ animationDelay: '0.55s' }}>
+              N · M · N · T
+            </div>
+            <div className="text-gray-300 text-sm sm:text-base mt-3 intro-rise" style={{ animationDelay: '0.8s' }}>
+              World Cup 2026 Challenge <span className="text-green-500">🌵</span>
+            </div>
+
+            <div className="flex gap-1.5 mt-5 text-lg sm:text-xl">
+              {flags.map((f, i) => (
+                <span key={i} className="intro-flag" style={{ animationDelay: `${1 + i * 0.07}s` }}>{f}</span>
+              ))}
+            </div>
+
+            <div className="mt-7 h-1 w-40 rounded-full bg-gray-800 overflow-hidden">
+              <div className="h-full w-full intro-bar" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+
     // ─── APP ──────────────────────────────────────────────────────────────────
 
     function App() {
@@ -2100,6 +2180,15 @@
       const [fbError, setFbError]     = React.useState(null);
       const [activeTab, setActiveTab] = React.useState('leaderboard');
       const [passModal, setPassModal] = React.useState(null);
+      const [showIntro, setShowIntro]   = React.useState(true);
+      const [introFading, setIntroFading] = React.useState(false);
+
+      // Preroll splash: play ~2.6s, fade for 0.6s, then reveal the app
+      React.useEffect(() => {
+        const fade = setTimeout(() => setIntroFading(true), 2600);
+        const done = setTimeout(() => setShowIntro(false), 3200);
+        return () => { clearTimeout(fade); clearTimeout(done); };
+      }, []);
 
       // Connect to fixed Firebase room on mount; initialize if first run
       useEffect(() => {
@@ -2272,6 +2361,12 @@
         if (confirm('Reset the entire draft and all scores? This cannot be undone.')) {
           writeState(DEFAULT_DRAFT_STATE);
         }
+      }
+
+      // Preroll intro plays first; if Firebase is still loading when it ends,
+      // the connecting screen below takes over seamlessly.
+      if (showIntro) {
+        return <IntroSplash fading={introFading} />;
       }
 
       if (loading) {
