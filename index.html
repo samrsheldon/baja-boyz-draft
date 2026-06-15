@@ -1076,7 +1076,7 @@
               score: c?.score?.displayValue ?? c?.score?.value ?? c?.score ?? '',
             };
           };
-          // A quick one-line take on a finished match (randomised for variety)
+          // A quick, witty one-line take on a finished match (randomised for variety)
           const pick = arr => arr[Math.floor(Math.random() * arr.length)];
           const commentary = (a, h) => {
             const ag = parseInt(a.score) || 0, hg = parseInt(h.score) || 0;
@@ -1084,14 +1084,14 @@
             const W = (ag > hg ? a : h).name, L = (ag > hg ? h : a).name;
             if (margin === 0) {
               return total === 0
-                ? pick(['Goalless stalemate — a point apiece. 🤝', 'Nil-nil grind, honours shared. 😴', 'No goals, no winner — a point each. 🤝'])
-                : pick([`Honours even in a ${total}-goal share. 🤝`, `They cancel each other out — a point apiece. ⚖️`, `End-to-end draw, spoils split. 🔁`]);
+                ? pick(['Goalless arm-wrestle — a point each. 😴', 'Nil-nil, chances at a premium. 🤝', 'No goals, no winner, no fun. ⚖️'])
+                : pick([`${a.name} and ${h.name} trade blows — honours even. 🤝`, `A ${total}-goal handshake. Spoils split. ⚖️`, `Nobody blinked — a point apiece. 🔁`]);
             }
-            if (margin >= 4) return pick([`${W} run riot! 🔥`, `${W} put ${L} to the sword. ⚔️`, `Statement win — ${W} romp home. 🌪️`, `${W} hand out a hiding. 😤`]);
-            if (margin === 3) return pick([`${W} cruise to a commanding win. 💪`, `Comfortable stuff from ${W}. 🛳️`, `${W} win it at a canter. 🐎`]);
-            if (total >= 4)   return pick([`${W} edge a goal-fest. ⚡`, `Seven-goal... well, ${total}-goal thriller — ${W} prevail. 🎢`, `${W} win the shoot-out. 🎯`]);
-            if (total === 1)  return pick([`${W} grind out a 1–0. 🧱`, `${W} nick it by a single goal. 🪡`, `One goal enough for ${W}. 🔒`]);
-            return pick([`${W} take all three points. ✅`, `${W} get the job done. 👏`, `${W} edge it. 🙌`, `Big three points for ${W}. 📈`]);
+            if (margin >= 4) return pick([`${W} run riot — ${L} put to the sword. ⚔️`, `Statement made. ${W} romp, ${L} routed. 🌪️`, `${W} hand ${L} a hiding. 😤`, `No hosting mood from ${W} — ${L} sent packing. 🧳`]);
+            if (margin === 3) return pick([`${W} cruise at a canter. 🐎`, `Comfortable afternoon for ${W}. 🛳️`, `${W} win it with room to spare. 💪`]);
+            if (total >= 4)   return pick([`${W} edge a ${total}-goal slugfest. Nobody blinked. 🥊`, `Haymakers traded — ${W} land the last one. 🎢`, `End-to-end chaos, ${W} on the right side of it. ⚡`]);
+            if (total === 1)  return pick([`${W} pull off the smash-and-grab — one goal, three points, no fuss. 🪡`, `${W} nick it by the only goal. 🔒`, `${W} grind out a 1–0. 🧱`]);
+            return pick([`${W} take care of business vs ${L}. ✅`, `${W} get the job done. 👏`, `${W} edge it. 🙌`, `Big three points for ${W}. 📈`]);
           };
           const sides = e => {
             const cs = e.competitions?.[0]?.competitors || [];
@@ -1121,6 +1121,17 @@
               .filter(e => { const s = e.competitions?.[0]?.status?.type; return s?.completed || s?.state === 'post'; })
               .sort((a, b) => new Date(a.date) - new Date(b.date));
             lines.push(`📊 RESULTS — ${dateLabel(resultsKey)}`, '');
+            const goals = done.reduce((s, e) => {
+              const { home, away } = sides(e);
+              return s + (parseInt(info(away).score) || 0) + (parseInt(info(home).score) || 0);
+            }, 0);
+            if (done.length) {
+              lines.push(pick([
+                `${goals} goals across ${done.length} game${done.length > 1 ? 's' : ''}. Buckle up. 🎢`,
+                `${done.length} game${done.length > 1 ? 's' : ''}, ${goals} goals. Let's relive it. 🍿`,
+                `${goals} goals on the day — not a bad watch. ⚽️`,
+              ]), '');
+            }
             for (const e of done) {
               const { home, away } = sides(e); const a = info(away), h = info(home);
               lines.push(`⚽️ ${a.flag} ${a.name} ${a.score}–${h.score} ${h.name} ${h.flag}`);
