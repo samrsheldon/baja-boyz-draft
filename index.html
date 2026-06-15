@@ -948,6 +948,44 @@
     }
 
 
+    // WC 2026 venue coordinates, keyed by ESPN's exact venue.fullName.
+    // Used to fetch day-of-match forecasts from Open-Meteo (free, no key).
+    const VENUE_COORDS = {
+      'MetLife Stadium':                 { lat: 40.8128, lon: -74.0742 },
+      'AT&T Stadium':                    { lat: 32.7473, lon: -97.0945 },
+      'Mercedes-Benz Stadium':           { lat: 33.7555, lon: -84.4008 },
+      'NRG Stadium':                     { lat: 29.6847, lon: -95.4107 },
+      'GEHA Field at Arrowhead Stadium': { lat: 39.0489, lon: -94.4839 },
+      'SoFi Stadium':                    { lat: 33.9535, lon: -118.3392 },
+      'Hard Rock Stadium':               { lat: 25.9580, lon: -80.2389 },
+      'Lincoln Financial Field':         { lat: 39.9008, lon: -75.1675 },
+      "Levi's Stadium":                  { lat: 37.4030, lon: -121.9698 },
+      'Lumen Field':                     { lat: 47.5952, lon: -122.3316 },
+      'Gillette Stadium':                { lat: 42.0909, lon: -71.2643 },
+      'BMO Field':                       { lat: 43.6332, lon: -79.4185 },
+      'BC Place':                        { lat: 49.2768, lon: -123.1119 },
+      'Estadio Banorte':                 { lat: 19.3029, lon: -99.1505 },
+      'Estadio Akron':                   { lat: 20.6817, lon: -103.4626 },
+      'Estadio BBVA':                    { lat: 25.6692, lon: -100.2444 },
+    };
+
+    // WMO weather code → { emoji, label }
+    function wmoWeather(code) {
+      if (code === 0) return { emoji: '☀️', label: 'Clear' };
+      if (code === 1) return { emoji: '🌤️', label: 'Mainly clear' };
+      if (code === 2) return { emoji: '⛅', label: 'Partly cloudy' };
+      if (code === 3) return { emoji: '☁️', label: 'Overcast' };
+      if (code === 45 || code === 48) return { emoji: '🌫️', label: 'Fog' };
+      if (code >= 51 && code <= 57) return { emoji: '🌦️', label: 'Drizzle' };
+      if (code >= 61 && code <= 67) return { emoji: '🌧️', label: 'Rain' };
+      if (code >= 71 && code <= 77) return { emoji: '🌨️', label: 'Snow' };
+      if (code >= 80 && code <= 82) return { emoji: '🌦️', label: 'Showers' };
+      if (code === 85 || code === 86) return { emoji: '🌨️', label: 'Snow showers' };
+      if (code >= 95) return { emoji: '⛈️', label: 'Thunderstorm' };
+      return { emoji: '🌡️', label: '' };
+    }
+
+
     // ─── FIXTURES SCREEN ──────────────────────────────────────────────────────
 
     function FixturesScreen({ state }) {
@@ -955,6 +993,8 @@
       const [fixtures, setFixtures] = React.useState(null);
       const [loading, setLoading]   = React.useState(true);
       const [error, setError]       = React.useState('');
+      // weather[venueName] = { offset: utcOffsetSeconds, days: { 'YYYY-MM-DD': {code,hi,lo,precip} } }
+      const [weather, setWeather]   = React.useState({});
 
       const ownerByTeamId = React.useMemo(() => {
         const m = {};
@@ -992,6 +1032,7 @@
                 const comps = e.competitions?.[0]?.competitors || [];
                 const home = comps.find(c => c.homeAway === 'home') || comps[0];
                 const away = comps.find(c => c.homeAway === 'away') || comps[1];
+                const venue = e.competitions?.[0]?.venue || e.venue || {};
                 events.push({
                   id: e.id,
                   date: new Date(e.date),
@@ -1001,6 +1042,9 @@
                   home, away,
                   homeScore: home?.score?.displayValue ?? home?.score?.value,
                   awayScore: away?.score?.displayValue ?? away?.score?.value,
+                  venueName: venue.fullName || '',
+                  city: venue.address?.city || '',
+                  country: venue.address?.country || '',
                 });
               }
             }
@@ -1017,6 +1061,46 @@
         })();
         return () => { cancelled = true; };
       }, []);
+
+      // Fetch day-of-match forecasts (Open-Meteo, free/no-key) once fixtures load.
+      // One request per unique venue covers all of that venue's fixtures.
+      React.useEffect(() => {
+        if (!fixtures || fixtures.length === 0) return;
+        let cancelled = false;
+        (async () => {
+          const venues = [...new Set(fixtures.map(f => f.venueName).filter(v => VENUE_COORDS[v]))];
+          const entries = await Promise.allSettled(venues.map(async name => {
+            const { lat, lon } = VENUE_COORDS[name];
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+              + `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max`
+              + `&temperature_unit=fahrenheit&timezone=auto&forecast_days=16`;
+            const d = await fetch(url).then(r => r.json());
+            const days = {};
+            (d.daily?.time || []).forEach((date, i) => {
+              days[date] = {
+                code:   d.daily.weather_code?.[i],
+                hi:     Math.round(d.daily.temperature_2m_max?.[i]),
+                lo:     Math.round(d.daily.temperature_2m_min?.[i]),
+                precip: d.daily.precipitation_probability_max?.[i],
+              };
+            });
+            return [name, { offset: d.utc_offset_seconds || 0, days }];
+          }));
+          if (cancelled) return;
+          const next = {};
+          for (const e of entries) if (e.status === 'fulfilled') next[e.value[0]] = e.value[1];
+          setWeather(next);
+        })();
+        return () => { cancelled = true; };
+      }, [fixtures]);
+
+      // Look up a fixture's forecast for its venue-local match day
+      function fixtureWeather(f) {
+        const w = weather[f.venueName];
+        if (!w) return null;
+        const localDate = new Date(f.date.getTime() + w.offset * 1000).toISOString().slice(0, 10);
+        return w.days[localDate] || null;
+      }
 
       function teamCell(comp, score, align) {
         const espnId = String(comp?.team?.id ?? comp?.id ?? '');
@@ -1095,6 +1179,27 @@
                         </div>
                         {f.round && f.round !== 'Group Stage' && (
                           <div className="text-center text-[10px] text-gray-500 mt-1.5 uppercase tracking-wide">{f.round}</div>
+                        )}
+                        {(f.venueName || fixtureWeather(f)) && (
+                          <div className="mt-2 pt-2 border-t border-gray-700/60 flex items-center justify-between gap-2">
+                            <div className="min-w-0 text-[11px] truncate">
+                              {f.venueName && <span className="text-gray-300">📍 {f.venueName}</span>}
+                              {f.city && <span className="text-gray-500"> · {f.city}{f.country ? `, ${f.country}` : ''}</span>}
+                            </div>
+                            {(() => {
+                              const wx = fixtureWeather(f);
+                              if (!wx || wx.hi == null) return null;
+                              const { emoji, label } = wmoWeather(wx.code);
+                              return (
+                                <div className="flex-shrink-0 flex items-center gap-1 text-[11px] text-gray-300" title={label}>
+                                  <span className="text-sm">{emoji}</span>
+                                  <span className="font-semibold">{wx.hi}°</span>
+                                  <span className="text-gray-500">/{wx.lo}°</span>
+                                  {wx.precip != null && wx.precip >= 30 && <span className="text-blue-400">💧{wx.precip}%</span>}
+                                </div>
+                              );
+                            })()}
+                          </div>
                         )}
                       </div>
                     );
