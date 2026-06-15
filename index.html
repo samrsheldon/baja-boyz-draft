@@ -2047,6 +2047,23 @@
       const stateRef = React.useRef(state);
       React.useEffect(() => { stateRef.current = state; }, [state]);
 
+      // Background auto-sync: pull ESPN scores every 5 min while the app is open.
+      // Covers GitHub Actions cron delays/drops so scores stay current without a
+      // manual click. Writes only the scores node — never touches picks.
+      React.useEffect(() => {
+        if (loading) return;
+        let stopped = false;
+        async function tick() {
+          try {
+            const { newScores } = await fetchESPNScores(stateRef.current.scores || {});
+            if (!stopped) db.ref(`drafts/${FIXED_ROOM_ID}/scores`).set(newScores);
+          } catch (e) { /* transient network/ESPN error — retry next tick */ }
+        }
+        const first = setTimeout(tick, 15000);           // shortly after load
+        const iv    = setInterval(tick, 5 * 60 * 1000);  // every 5 minutes
+        return () => { stopped = true; clearTimeout(first); clearInterval(iv); };
+      }, [loading]);
+
       function performAutoFill(s) {
         if (s.autoFilled) return;
         const picks = [...s.picks];
