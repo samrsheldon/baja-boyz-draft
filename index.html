@@ -1043,6 +1043,121 @@
         return m;
       }, [picks, draftOrder, players]);
 
+      const [sharing, setSharing] = React.useState(false);
+      const [shareMsg, setShareMsg] = React.useState('');
+
+      // Build a WhatsApp-ready recap (latest results + next fixtures + standings),
+      // with owners pulled straight from the draft data so they're always correct.
+      async function shareRecap() {
+        setSharing(true); setShareMsg('');
+        try {
+          const dayStr = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+          const now = new Date();
+          const dates = [-2,-1,0,1].map(o => dayStr(new Date(now.getTime() + o*86400000)));
+          const res = await Promise.allSettled(dates.map(dt =>
+            fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${dt}`).then(r => r.json())
+          ));
+
+          const byDate = {};
+          for (const r of res) {
+            if (r.status !== 'fulfilled') continue;
+            for (const e of (r.value?.events || [])) {
+              const key = new Date(e.date).toLocaleDateString('en-CA');
+              (byDate[key] = byDate[key] || []).push(e);
+            }
+          }
+
+          const info = c => {
+            const id = String(c?.team?.id ?? '');
+            const t = TEAM_BY_ESPN[id];
+            return {
+              flag: t?.flag || '', name: t?.name || c?.team?.shortDisplayName || c?.team?.displayName || '?',
+              owner: t ? ownerByTeamId[t.id] : null,
+              score: c?.score?.displayValue ?? c?.score?.value ?? '',
+            };
+          };
+          const sides = e => {
+            const cs = e.competitions?.[0]?.competitors || [];
+            return { home: cs.find(c => c.homeAway === 'home') || cs[0], away: cs.find(c => c.homeAway === 'away') || cs[1] };
+          };
+          const dateLabel = key => new Date(key + 'T12:00:00').toLocaleDateString('en', { weekday: 'short', month: 'long', day: 'numeric' });
+          const tz = (() => { try { return new Intl.DateTimeFormat('en', { timeZoneName: 'short' }).formatToParts(now).find(p => p.type === 'timeZoneName')?.value || ''; } catch { return ''; } })();
+
+          const todayKey = now.toLocaleDateString('en-CA');
+          const keys = Object.keys(byDate).sort();
+
+          let resultsKey = null;
+          for (const k of keys) {
+            if (k > todayKey) continue;
+            if (byDate[k].some(e => { const s = e.competitions?.[0]?.status?.type; return s?.completed || s?.state === 'post'; })) resultsKey = k;
+          }
+          let fixturesKey = null;
+          for (const k of keys) {
+            if (k < todayKey) continue;
+            if (byDate[k].some(e => { const s = e.competitions?.[0]?.status?.type?.state; return s === 'pre' || s === 'in'; })) { fixturesKey = k; break; }
+          }
+
+          const lines = ['🌵 BAJA BOYZ NMNT — WORLD CUP 2026 🌵', ''];
+
+          if (resultsKey) {
+            const done = byDate[resultsKey]
+              .filter(e => { const s = e.competitions?.[0]?.status?.type; return s?.completed || s?.state === 'post'; })
+              .sort((a, b) => new Date(a.date) - new Date(b.date));
+            lines.push(`📊 RESULTS — ${dateLabel(resultsKey)}`, '');
+            for (const e of done) {
+              const { home, away } = sides(e); const a = info(away), h = info(home);
+              lines.push(`⚽️ ${a.flag} ${a.name} ${a.score}–${h.score} ${h.name} ${h.flag}`);
+              lines.push(`     ${a.owner || '—'} / ${h.owner || '—'}`);
+            }
+            lines.push('');
+          }
+
+          if (fixturesKey) {
+            const up = byDate[fixturesKey]
+              .filter(e => { const s = e.competitions?.[0]?.status?.type?.state; return s === 'pre' || s === 'in'; })
+              .sort((a, b) => new Date(a.date) - new Date(b.date));
+            lines.push(`📅 ${fixturesKey === todayKey ? 'TODAY' : 'NEXT UP'} — ${dateLabel(fixturesKey)}${tz ? ` (${tz})` : ''}`, '');
+            for (const e of up) {
+              const { home, away } = sides(e); const a = info(away), h = info(home);
+              const t = new Date(e.date).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' });
+              lines.push(`⚽️ ${t} — ${a.flag} ${a.name} vs ${h.name} ${h.flag} (${a.owner || '—'} / ${h.owner || '—'})`);
+            }
+            lines.push('');
+          }
+
+          // Standings from draft + scores
+          const pts = {};
+          players.forEach(p => { pts[p] = 0; });
+          picks.forEach((tid) => {
+            if (!tid) return;
+            const s = (state.scores || {})[tid] || {};
+            pts[ownerByTeamId[tid]] += (s.groupPoints || 0) + (ROUND_BONUS[s.roundReached] || 0);
+          });
+          const standings = Object.entries(pts).sort((a, b) => b[1] - a[1]);
+          const medals = ['🥇', '🥈', '🥉'];
+          lines.push('🏆 STANDINGS');
+          standings.forEach(([p, v], i) => lines.push(`${medals[i] || `${i + 1}.`} ${p} — ${v}`));
+          lines.push('', '¡Vámonos, Boyz! 🏆');
+
+          const msg = lines.join('\n');
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+          if (isMobile) {
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+            setShareMsg('Opening WhatsApp…');
+          } else {
+            await navigator.clipboard.writeText(msg).then(
+              () => setShareMsg('✓ Copied! Paste into WhatsApp'),
+              () => window.prompt('Copy this recap:', msg)
+            );
+          }
+          setTimeout(() => setShareMsg(''), 4000);
+        } catch (err) {
+          setShareMsg(`Error: ${err.message}`);
+        } finally {
+          setSharing(false);
+        }
+      }
+
       React.useEffect(() => {
         let cancelled = false;
         (async () => {
@@ -1179,9 +1294,22 @@
 
       return (
         <div className="p-4 md:p-6 max-w-2xl mx-auto">
-          <div className="flex items-baseline justify-between mb-5">
+          <div className="flex items-baseline justify-between mb-3">
             <h2 className="text-xl font-black text-white">Upcoming Fixtures</h2>
             {tz && <span className="text-xs text-gray-500">times shown in {tz}</span>}
+          </div>
+
+          <div className="flex items-center gap-3 mb-5">
+            <button
+              onClick={shareRecap}
+              disabled={sharing}
+              className="flex items-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors"
+            >
+              {sharing
+                ? <><span className="animate-spin inline-block">⟳</span> Building…</>
+                : <>📲 Share recap + fixtures</>}
+            </button>
+            {shareMsg && <span className={`text-xs ${shareMsg.startsWith('✓') || shareMsg.startsWith('Opening') ? 'text-green-400' : 'text-red-400'}`}>{shareMsg}</span>}
           </div>
 
           {loading && <p className="text-gray-500 text-sm">Loading fixtures from ESPN…</p>}
