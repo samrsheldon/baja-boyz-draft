@@ -1076,17 +1076,22 @@
               score: c?.score?.displayValue ?? c?.score?.value ?? c?.score ?? '',
             };
           };
-          // A quick one-line take on a finished match
+          // A quick one-line take on a finished match (randomised for variety)
+          const pick = arr => arr[Math.floor(Math.random() * arr.length)];
           const commentary = (a, h) => {
             const ag = parseInt(a.score) || 0, hg = parseInt(h.score) || 0;
             const total = ag + hg, margin = Math.abs(ag - hg);
-            const win = ag > hg ? a : h;
-            if (margin === 0) return total === 0 ? 'Goalless stalemate — a point apiece. 🤝' : `Honors even in a ${total}-goal share. 🤝`;
-            if (margin >= 4) return `${win.name} run riot! 🔥`;
-            if (margin === 3) return `${win.name} cruise to a commanding win. 💪`;
-            if (total >= 4)   return `${win.name} edge a goal-fest. ⚡`;
-            if (total === 0 || (ag + hg) === 1) return `${win.name} grind out a 1–0. 🧱`;
-            return `${win.name} take all three points. ✅`;
+            const W = (ag > hg ? a : h).name, L = (ag > hg ? h : a).name;
+            if (margin === 0) {
+              return total === 0
+                ? pick(['Goalless stalemate — a point apiece. 🤝', 'Nil-nil grind, honours shared. 😴', 'No goals, no winner — a point each. 🤝'])
+                : pick([`Honours even in a ${total}-goal share. 🤝`, `They cancel each other out — a point apiece. ⚖️`, `End-to-end draw, spoils split. 🔁`]);
+            }
+            if (margin >= 4) return pick([`${W} run riot! 🔥`, `${W} put ${L} to the sword. ⚔️`, `Statement win — ${W} romp home. 🌪️`, `${W} hand out a hiding. 😤`]);
+            if (margin === 3) return pick([`${W} cruise to a commanding win. 💪`, `Comfortable stuff from ${W}. 🛳️`, `${W} win it at a canter. 🐎`]);
+            if (total >= 4)   return pick([`${W} edge a goal-fest. ⚡`, `Seven-goal... well, ${total}-goal thriller — ${W} prevail. 🎢`, `${W} win the shoot-out. 🎯`]);
+            if (total === 1)  return pick([`${W} grind out a 1–0. 🧱`, `${W} nick it by a single goal. 🪡`, `One goal enough for ${W}. 🔒`]);
+            return pick([`${W} take all three points. ✅`, `${W} get the job done. 👏`, `${W} edge it. 🙌`, `Big three points for ${W}. 📈`]);
           };
           const sides = e => {
             const cs = e.competitions?.[0]?.competitors || [];
