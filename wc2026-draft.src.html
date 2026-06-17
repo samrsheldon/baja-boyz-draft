@@ -1,0 +1,2635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Baja Boyz NMNT - World Cup 2026 Challenge 🌵</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@700&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC-PqWLpmhERwaI8k4LRZfoqMAw4MPcJgs",
+      authDomain: "baja-boyz-wc-2026-challenge.firebaseapp.com",
+      databaseURL: "https://baja-boyz-wc-2026-challenge-default-rtdb.firebaseio.com",
+      projectId: "baja-boyz-wc-2026-challenge",
+      storageBucket: "baja-boyz-wc-2026-challenge.firebasestorage.app",
+      messagingSenderId: "254731927711",
+      appId: "1:254731927711:web:d4575287d66599caff62aa",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+  </script>
+  <style>
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 4px 1px rgba(74, 222, 128, 0.4); }
+      50%       { box-shadow: 0 0 12px 4px rgba(74, 222, 128, 0.7); }
+    }
+    .on-clock-card { animation: glow 1.8s ease-in-out infinite; }
+
+    /* ── Intro preroll splash ─────────────────────────────── */
+    .intro-bg {
+      background:
+        radial-gradient(circle at 50% 38%, rgba(34,197,94,0.22), transparent 58%),
+        radial-gradient(circle at 50% 110%, rgba(13,148,136,0.18), transparent 55%);
+    }
+    @keyframes intro-pop {
+      0%   { opacity: 0; transform: scale(0.55) translateY(8px); }
+      60%  { opacity: 1; transform: scale(1.07) translateY(0); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    .intro-pop { animation: intro-pop 0.85s cubic-bezier(0.2,0.8,0.2,1) both; }
+    @keyframes intro-rise {
+      0%   { opacity: 0; transform: translateY(16px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .intro-rise { animation: intro-rise 0.6s ease-out both; }
+    @keyframes intro-flag {
+      0%   { opacity: 0; transform: translateY(10px) scale(0.4); }
+      70%  { opacity: 1; transform: translateY(-3px) scale(1.12); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .intro-flag { display: inline-block; animation: intro-flag 0.55s cubic-bezier(0.2,0.8,0.2,1) both; }
+    @keyframes intro-ball {
+      0%   { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .intro-ball { animation: intro-ball 7s linear infinite; }
+    @keyframes intro-bar {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .intro-bar { background: linear-gradient(90deg, transparent, #4ade80, transparent); animation: intro-bar 1.4s ease-in-out infinite; }
+    @keyframes intro-out { to { opacity: 0; visibility: hidden; } }
+    .intro-out { animation: intro-out 0.6s ease forwards; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .baja-wordmark {
+      font-family: 'Libre Baskerville', Georgia, serif;
+      letter-spacing: 0.18em;
+      font-weight: 700;
+    }
+    .baja-sub {
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.35em;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .baja-since {
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.3em;
+      font-weight: 400;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // ─── DATA ─────────────────────────────────────────────────────────────────
+
+    const TEAMS = [
+      // Group A
+      { id: 'MEX', name: 'Mexico',           flag: '🇲🇽', conf: 'CONCACAF', group: 'A', rank: 15, espnId: 203   },
+      { id: 'RSA', name: 'South Africa',     flag: '🇿🇦', conf: 'CAF',      group: 'A', rank: 60, espnId: 467   },
+      { id: 'KOR', name: 'Korea Republic',   flag: '🇰🇷', conf: 'AFC',      group: 'A', rank: 25, espnId: 451   },
+      { id: 'CZE', name: 'Czechia',          flag: '🇨🇿', conf: 'UEFA',     group: 'A', rank: 41, espnId: 450   },
+      // Group B
+      { id: 'CAN', name: 'Canada',           flag: '🇨🇦', conf: 'CONCACAF', group: 'B', rank: 30, espnId: 206   },
+      { id: 'BIH', name: 'Bosnia & Herz.',   flag: '🇧🇦', conf: 'UEFA',     group: 'B', rank: 65, espnId: 452   },
+      { id: 'QAT', name: 'Qatar',            flag: '🇶🇦', conf: 'AFC',      group: 'B', rank: 55, espnId: 4398  },
+      { id: 'SUI', name: 'Switzerland',      flag: '🇨🇭', conf: 'UEFA',     group: 'B', rank: 19, espnId: 475   },
+      // Group C
+      { id: 'BRA', name: 'Brazil',           flag: '🇧🇷', conf: 'CONMEBOL', group: 'C', rank: 6,  espnId: 205   },
+      { id: 'MAR', name: 'Morocco',          flag: '🇲🇦', conf: 'CAF',      group: 'C', rank: 8,  espnId: 2869  },
+      { id: 'HAI', name: 'Haiti',            flag: '🇭🇹', conf: 'CONCACAF', group: 'C', rank: 83, espnId: 2654  },
+      { id: 'SCO', name: 'Scotland',         flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', conf: 'UEFA',     group: 'C', rank: 43, espnId: 580   },
+      // Group D
+      { id: 'USA', name: 'United States',    flag: '🇺🇸', conf: 'CONCACAF', group: 'D', rank: 16, espnId: 660   },
+      { id: 'PAR', name: 'Paraguay',         flag: '🇵🇾', conf: 'CONMEBOL', group: 'D', rank: 40, espnId: 210   },
+      { id: 'AUS', name: 'Australia',        flag: '🇦🇺', conf: 'AFC',      group: 'D', rank: 27, espnId: 628   },
+      { id: 'TUR', name: 'Türkiye',          flag: '🇹🇷', conf: 'UEFA',     group: 'D', rank: 22, espnId: 465   },
+      // Group E
+      { id: 'GER', name: 'Germany',          flag: '🇩🇪', conf: 'UEFA',     group: 'E', rank: 10, espnId: 481   },
+      { id: 'CUW', name: 'Curaçao',          flag: '🇨🇼', conf: 'CONCACAF', group: 'E', rank: 82, espnId: 11678 },
+      { id: 'CIV', name: "Côte d'Ivoire",    flag: '🇨🇮', conf: 'CAF',      group: 'E', rank: 34, espnId: 4789  },
+      { id: 'ECU', name: 'Ecuador',          flag: '🇪🇨', conf: 'CONMEBOL', group: 'E', rank: 23, espnId: 209   },
+      // Group F
+      { id: 'NED', name: 'Netherlands',      flag: '🇳🇱', conf: 'UEFA',     group: 'F', rank: 7,  espnId: 449   },
+      { id: 'JPN', name: 'Japan',            flag: '🇯🇵', conf: 'AFC',      group: 'F', rank: 18, espnId: 627   },
+      { id: 'SWE', name: 'Sweden',           flag: '🇸🇪', conf: 'UEFA',     group: 'F', rank: 38, espnId: 466   },
+      { id: 'TUN', name: 'Tunisia',          flag: '🇹🇳', conf: 'CAF',      group: 'F', rank: 44, espnId: 659   },
+      // Group G
+      { id: 'BEL', name: 'Belgium',          flag: '🇧🇪', conf: 'UEFA',     group: 'G', rank: 9,  espnId: 459   },
+      { id: 'EGY', name: 'Egypt',            flag: '🇪🇬', conf: 'CAF',      group: 'G', rank: 29, espnId: 2620  },
+      { id: 'IRN', name: 'IR Iran',          flag: '🇮🇷', conf: 'AFC',      group: 'G', rank: 21, espnId: 469   },
+      { id: 'NZL', name: 'New Zealand',      flag: '🇳🇿', conf: 'OFC',      group: 'G', rank: 85, espnId: 2666  },
+      // Group H
+      { id: 'ESP', name: 'Spain',            flag: '🇪🇸', conf: 'UEFA',     group: 'H', rank: 2,  espnId: 164   },
+      { id: 'CPV', name: 'Cabo Verde',       flag: '🇨🇻', conf: 'CAF',      group: 'H', rank: 69, espnId: 2597  },
+      { id: 'KSA', name: 'Saudi Arabia',     flag: '🇸🇦', conf: 'AFC',      group: 'H', rank: 61, espnId: 655   },
+      { id: 'URU', name: 'Uruguay',          flag: '🇺🇾', conf: 'CONMEBOL', group: 'H', rank: 17, espnId: 212   },
+      // Group I
+      { id: 'FRA', name: 'France',           flag: '🇫🇷', conf: 'UEFA',     group: 'I', rank: 1,  espnId: 478   },
+      { id: 'SEN', name: 'Senegal',          flag: '🇸🇳', conf: 'CAF',      group: 'I', rank: 14, espnId: 654   },
+      { id: 'IRQ', name: 'Iraq',             flag: '🇮🇶', conf: 'AFC',      group: 'I', rank: 57, espnId: 4375  },
+      { id: 'NOR', name: 'Norway',           flag: '🇳🇴', conf: 'UEFA',     group: 'I', rank: 31, espnId: 464   },
+      // Group J
+      { id: 'ARG', name: 'Argentina',        flag: '🇦🇷', conf: 'CONMEBOL', group: 'J', rank: 3,  espnId: 202   },
+      { id: 'ALG', name: 'Algeria',          flag: '🇩🇿', conf: 'CAF',      group: 'J', rank: 28, espnId: 624   },
+      { id: 'AUT', name: 'Austria',          flag: '🇦🇹', conf: 'UEFA',     group: 'J', rank: 24, espnId: 474   },
+      { id: 'JOR', name: 'Jordan',           flag: '🇯🇴', conf: 'AFC',      group: 'J', rank: 63, espnId: 2917  },
+      // Group K
+      { id: 'POR', name: 'Portugal',         flag: '🇵🇹', conf: 'UEFA',     group: 'K', rank: 5,  espnId: 482   },
+      { id: 'COD', name: 'Congo DR',         flag: '🇨🇩', conf: 'CAF',      group: 'K', rank: 46, espnId: 2850  },
+      { id: 'UZB', name: 'Uzbekistan',       flag: '🇺🇿', conf: 'AFC',      group: 'K', rank: 50, espnId: 2570  },
+      { id: 'COL', name: 'Colombia',         flag: '🇨🇴', conf: 'CONMEBOL', group: 'K', rank: 13, espnId: 208   },
+      // Group L
+      { id: 'ENG', name: 'England',          flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', conf: 'UEFA',     group: 'L', rank: 4,  espnId: 448   },
+      { id: 'CRO', name: 'Croatia',          flag: '🇭🇷', conf: 'UEFA',     group: 'L', rank: 11, espnId: 477   },
+      { id: 'GHA', name: 'Ghana',            flag: '🇬🇭', conf: 'CAF',      group: 'L', rank: 74, espnId: 4469  },
+      { id: 'PAN', name: 'Panama',           flag: '🇵🇦', conf: 'CONCACAF', group: 'L', rank: 33, espnId: 2659  },
+    ];
+
+    // 2026 format: 12 groups → R32 → R16 → QF → SF → Final + Bronze
+    const ROUNDS = [
+      'Eliminated (Group Stage)',
+      'Round of 32',
+      'Round of 16',
+      'Quarterfinal',
+      'Semifinal',
+      '3rd Place',
+      'Runner-up',
+      'Champion',
+    ];
+
+    const ROUND_BONUS = {
+      'Eliminated (Group Stage)': 0,
+      'Round of 32':  8,
+      'Round of 16': 14,
+      'Quarterfinal': 22,
+      'Semifinal':    32,
+      '3rd Place':    38,
+      'Runner-up':    45,
+      'Champion':     55,
+    };
+
+    // Maps ESPN seasonType.name (lower-cased) → our ROUNDS values.
+    // The fifa.world schedule exposes the round on event.seasonType.name
+    // (e.g. "Group Stage", "Round of 32", "Quarterfinals"); season.slug is null.
+    const ESPN_ROUND_NAME_TO_ROUND = {
+      'group stage':       'Eliminated (Group Stage)',
+      'round of 32':       'Round of 32',
+      'round of 16':       'Round of 16',
+      'quarterfinals':     'Quarterfinal',
+      'quarterfinal':      'Quarterfinal',
+      'semifinals':        'Semifinal',
+      'semifinal':         'Semifinal',
+      'third place':       '3rd Place',
+      'third-place':       '3rd Place',
+      '3rd place':         '3rd Place',
+      'final':             'Runner-up', // overridden to Champion if winner===true
+    };
+    // Ordering used to pick the furthest round a team reached
+    const ROUND_ORDER = {
+      'Eliminated (Group Stage)': 0, 'Round of 32': 1, 'Round of 16': 2,
+      'Quarterfinal': 3, 'Semifinal': 4, '3rd Place': 5, 'Runner-up': 6, 'Champion': 7,
+    };
+
+    const CONF_COLORS = {
+      UEFA:     'text-blue-400',
+      CONMEBOL: 'text-emerald-400',
+      CONCACAF: 'text-red-400',
+      CAF:      'text-yellow-400',
+      AFC:      'text-purple-400',
+      OFC:      'text-teal-400',
+      Playoff:  'text-gray-400',
+    };
+
+    const CONF_BG = {
+      UEFA:     'bg-blue-900/20',
+      CONMEBOL: 'bg-emerald-900/20',
+      CONCACAF: 'bg-red-900/20',
+      CAF:      'bg-yellow-900/20',
+      AFC:      'bg-purple-900/20',
+      OFC:      'bg-teal-900/20',
+      Playoff:  'bg-gray-800/30',
+    };
+
+    const PAGES_URL      = 'https://samrsheldon.github.io/baja-boyz-draft/';
+    const FIXED_ROOM_ID  = 'BAJAWC26';
+    const FIXED_PLAYERS  = ['Bucklinho','Garrinho','Paulinho','Saminho','Elliottinho','Claudinho','Zakinho','Fellinho'];
+    const FIXED_AI_IDX   = 5;
+    const DRAFT_DEADLINE = new Date('2026-06-11T19:00:00.000Z'); // 1:00 PM CST — Mexico kick-off
+
+    const DEFAULT_DRAFT_STATE = {
+      phase: 'draft',
+      players: FIXED_PLAYERS,
+      draftOrder: [0,1,2,3,4,5,6,7],
+      picks: Array(48).fill(null),
+      scores: {},
+      aiPlayerIdx: FIXED_AI_IDX,
+    };
+
+    // ─── HELPERS ──────────────────────────────────────────────────────────────
+
+    function pickToPlayer(pickIdx, draftOrder) {
+      const round = Math.floor(pickIdx / 8);
+      const pos   = pickIdx % 8;
+      const slot  = round % 2 === 0 ? pos : 7 - pos;
+      return draftOrder[slot];
+    }
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function teamMap() {
+      const m = {};
+      TEAMS.forEach(t => { m[t.id] = t; });
+      return m;
+    }
+    const TEAM_BY_ID = teamMap();
+    const TEAM_BY_ESPN = (() => {
+      const m = {};
+      TEAMS.forEach(t => { if (t.espnId) m[String(t.espnId)] = t; });
+      return m;
+    })();
+
+    const LOGO_SRC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAfQAAAH0CAIAAABEtEjdAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAFqWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSfvu78nIGlkPSdXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQnPz4KPHg6eG1wbWV0YSB4bWxuczp4PSdhZG9iZTpuczptZXRhLyc+CjxyZGY6UkRGIHhtbG5zOnJkZj0naHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyc+CgogPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9JycKICB4bWxuczpBdHRyaWI9J2h0dHA6Ly9ucy5hdHRyaWJ1dGlvbi5jb20vYWRzLzEuMC8nPgogIDxBdHRyaWI6QWRzPgogICA8cmRmOlNlcT4KICAgIDxyZGY6bGkgcmRmOnBhcnNlVHlwZT0nUmVzb3VyY2UnPgogICAgIDxBdHRyaWI6Q3JlYXRlZD4yMDI2LTA1LTE1PC9BdHRyaWI6Q3JlYXRlZD4KICAgICA8QXR0cmliOkRhdGE+eyZxdW90O2RvYyZxdW90OzomcXVvdDtEQUc0SnNOeHNKZyZxdW90OywmcXVvdDt1c2VyJnF1b3Q7OiZxdW90O1VBRmlBbEdJR2xNJnF1b3Q7LCZxdW90O2JyYW5kJnF1b3Q7OiZxdW90O0JBRmlBbnI0OHdzJnF1b3Q7LCZxdW90O3RlbXBsYXRlJnF1b3Q7OiZxdW90O0xvZ28gbWFyY2EgcGVyc29uYWwgbW9kZXJubyZxdW90O308L0F0dHJpYjpEYXRhPgogICAgIDxBdHRyaWI6RXh0SWQ+NDBiZGUwNzctYjhmZi00MWU5LWJhMDAtZDRlMjhiZTRlNTg4PC9BdHRyaWI6RXh0SWQ+CiAgICAgPEF0dHJpYjpGYklkPjUyNTI2NTkxNDE3OTU4MDwvQXR0cmliOkZiSWQ+CiAgICAgPEF0dHJpYjpUb3VjaFR5cGU+MjwvQXR0cmliOlRvdWNoVHlwZT4KICAgIDwvcmRmOmxpPgogICA8L3JkZjpTZXE+CiAgPC9BdHRyaWI6QWRzPgogPC9yZGY6RGVzY3JpcHRpb24+CgogPHJkZjpEZXNjcmlw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';
+
+    const TEAM_RATINGS = {
+      'FRA': 96, 'ENG': 94, 'ESP': 93, 'GER': 92, 'BRA': 91, 'ARG': 90, 'POR': 89, 'NED': 88,
+      'BEL': 84, 'CRO': 82, 'URU': 81, 'MAR': 80, 'JPN': 78, 'COL': 77, 'ECU': 76, 'AUT': 75,
+      'SUI': 74, 'TUR': 73, 'SEN': 72, 'USA': 71, 'MEX': 70, 'KOR': 69, 'AUS': 68, 'SWE': 66,
+      'GHA': 64, 'NOR': 63, 'IRN': 62, 'KSA': 61, 'IRQ': 59, 'ALG': 58, 'UZB': 57, 'PAR': 56,
+      'SCO': 55, 'CAN': 54, 'PAN': 53, 'TUN': 52, 'EGY': 51, 'NZL': 50, 'QAT': 48, 'JOR': 47,
+      'CZE': 46, 'RSA': 44, 'HAI': 43, 'CIV': 42, 'BIH': 41, 'CPV': 40, 'COD': 39, 'CUW': 35,
+    };
+
+    // ─── SETUP SCREEN ─────────────────────────────────────────────────────────
+
+    function SetupScreen({ onStart }) {
+      const [players, setPlayers]  = useState(Array(8).fill(''));
+      const [randomize, setRandom] = useState(true);
+      const [aiIdx, setAiIdx]      = useState(null);
+
+      const allFilled = players.every(p => p.trim());
+
+      function setPlayer(i, val) {
+        const next = [...players]; next[i] = val; setPlayers(next);
+      }
+
+      function handleStart() {
+        const order = randomize ? shuffle([0,1,2,3,4,5,6,7]) : [0,1,2,3,4,5,6,7];
+        onStart(players.map(p => p.trim()), order, aiIdx);
+      }
+
+      return (
+        <div className="max-w-md mx-auto py-16 px-4">
+          <div className="text-center mb-10">
+            <img src={LOGO_SRC} alt="Baja Boyz" className="w-56 mx-auto mb-2 select-none" style={{filter:'invert(1) brightness(0.85)'}} />
+            <div className="mt-4 border-t border-gray-700 pt-4">
+              <p className="text-gray-400 text-xs uppercase tracking-widest">World Cup 2026 Challenge 🌵</p>
+              <p className="text-gray-600 text-xs mt-0.5">8 players · 6 rounds · 48 teams</p>
+            </div>
+          </div>
+
+          <div className="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4">Player Names</h2>
+
+            <div className="space-y-2">
+              {players.map((name, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-gray-600 text-sm w-5 text-right flex-shrink-0">{i + 1}</span>
+                  <input
+                    className={`flex-1 bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 placeholder-gray-600 transition-all ${aiIdx === i ? 'ring-2 ring-blue-500 focus:ring-blue-400' : 'focus:ring-green-500'}`}
+                    placeholder={`Player ${i + 1}`}
+                    value={name}
+                    onChange={e => setPlayer(i, e.target.value)}
+                  />
+                  <button
+                    onClick={() => setAiIdx(aiIdx === i ? null : i)}
+                    title={aiIdx === i ? 'Remove AI' : 'Mark as AI'}
+                    className={`text-xl flex-shrink-0 rounded-lg p-1 transition-all ${aiIdx === i ? 'opacity-100 bg-blue-900/50 ring-1 ring-blue-500' : 'opacity-25 hover:opacity-60'}`}
+                  >
+                    🤖
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {aiIdx !== null && (
+              <div className="mt-3 bg-blue-900/30 border border-blue-700/40 rounded-lg px-3 py-2 text-xs text-blue-300">
+                🤖 <strong>{players[aiIdx] || `Player ${aiIdx + 1}`}</strong> will be Claudinho (AI) — auto-picks the strongest available team each round.
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 mt-4">
+              <input type="checkbox" id="rand" checked={randomize} onChange={e => setRandom(e.target.checked)} className="w-4 h-4 accent-green-500 cursor-pointer" />
+              <label htmlFor="rand" className="text-gray-300 text-sm cursor-pointer">Randomize draft order</label>
+            </div>
+
+            <button
+              disabled={!allFilled}
+              onClick={handleStart}
+              className="w-full mt-5 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl text-sm transition-colors"
+            >
+              Start Draft
+            </button>
+          </div>
+
+          <div className="mt-6 bg-gray-900 rounded-xl p-4 border border-gray-800 text-xs text-gray-500 space-y-1">
+            <div className="text-gray-400 font-medium mb-2">How it works</div>
+            <div>• Snake draft: picks go 1→8 then 8→1 each round</div>
+            <div>• Commissioner enters picks as players respond via group chat</div>
+            <div>• Use <strong className="text-gray-300">Share</strong> after each pick to send state URL</div>
+            <div>• Tap 🤖 on any player row to hand that seat to Claudinho (AI)</div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── DRAFT SCREEN ─────────────────────────────────────────────────────────
+
+    function DraftScreen({ state, onPick, onUndo, onShare }) {
+      const { players, draftOrder } = state;
+      const [confFilter, setConf] = useState('All');
+      // Firebase strips trailing nulls — always rebuild the full 48-slot array
+      const picks = (() => {
+        const raw = state.picks;
+        const arr = Array(48).fill(null);
+        if (!raw) return arr;
+        if (Array.isArray(raw)) raw.forEach((v, i) => { if (i < 48 && v) arr[i] = v; });
+        else Object.entries(raw).forEach(([k, v]) => { if (v) arr[parseInt(k)] = v; });
+        return arr;
+      })();
+
+      const currentPickIdx   = picks.findIndex(p => p === null);
+      const draftDone        = currentPickIdx === -1;
+      const currentPlayerIdx = draftDone ? null : pickToPlayer(currentPickIdx, draftOrder);
+      const currentPlayer    = currentPlayerIdx !== null ? players[currentPlayerIdx] : null;
+
+      const lastPickIdx = picks.map((p, i) => p !== null ? i : -1).filter(i => i >= 0).slice(-1)[0] ?? -1;
+
+      const pickedByName = useMemo(() => {
+        const m = {};
+        picks.forEach((teamId, idx) => {
+          if (teamId) m[teamId] = players[pickToPlayer(idx, draftOrder)];
+        });
+        return m;
+      }, [picks, draftOrder, players]);
+
+      const confs = ['All', 'UEFA', 'CONMEBOL', 'CONCACAF', 'CAF', 'AFC', 'OFC', 'Playoff'];
+      const displayTeams = (confFilter === 'All' ? TEAMS : TEAMS.filter(t => t.conf === confFilter))
+        .slice().sort((a, b) => a.name.localeCompare(b.name));
+
+      return (
+        <div className="flex min-h-[calc(100vh-88px)]">
+
+          {/* Sidebar: draft board */}
+          <aside className="w-56 bg-gray-900 border-r border-gray-800 flex-shrink-0 overflow-y-auto hidden md:block">
+            <div className="p-3">
+              <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-3">Draft Board</div>
+
+              {draftDone ? (
+                <div className="text-green-400 text-xs font-medium">✓ Draft Complete</div>
+              ) : (() => {
+                  const isAI = state.aiPlayerIdx !== null && pickToPlayer(currentPickIdx, draftOrder) === state.aiPlayerIdx;
+                  return (
+                    <div className={`border rounded-lg p-2 mb-3 ${isAI ? 'bg-blue-900/40 border-blue-700/60' : 'bg-green-900/40 border-green-700/60'}`}>
+                      <div className={`text-xs uppercase tracking-wide ${isAI ? 'text-blue-400' : 'text-green-400'}`}>
+                        {isAI ? '🤖 Claudinho thinking…' : 'On the Clock'}
+                      </div>
+                      <div className="text-white font-bold text-sm mt-0.5 truncate">{currentPlayer}</div>
+                      <div className="text-gray-400 text-xs">Pick {currentPickIdx + 1} · R{Math.floor(currentPickIdx / 8) + 1}</div>
+                    </div>
+                  );
+                })()
+              }
+
+              {Array.from({ length: 6 }, (_, round) => (
+                <div key={round} className="mb-3">
+                  <div className="text-xs text-gray-600 uppercase tracking-wider mb-1">Round {round + 1}</div>
+                  {Array.from({ length: 8 }, (_, pos) => {
+                    const pIdx    = round * 8 + pos;
+                    const plrIdx  = pickToPlayer(pIdx, draftOrder);
+                    const teamId  = picks[pIdx];
+                    const team    = teamId ? TEAM_BY_ID[teamId] : null;
+                    const isCurr  = pIdx === currentPickIdx;
+                    return (
+                      <div
+                        key={pIdx}
+                        className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded text-xs ${isCurr ? 'bg-green-900/50 text-green-200' : 'text-gray-500'}`}
+                      >
+                        <span className="w-5 text-right text-gray-700 flex-shrink-0">{pIdx + 1}.</span>
+                        <span className={`flex-1 truncate ${team ? 'text-gray-200' : 'text-gray-700'}`}>
+                          {team ? `${team.flag} ${team.name}` : '—'}
+                        </span>
+                        <span className="text-gray-600 truncate max-w-[40px]">
+                          {players[plrIdx]?.split(' ')[0]}
+                        </span>
+                        {team && onShare && (
+                          <button
+                            onClick={() => onShare({
+                              pickerName: players[plrIdx],
+                              team,
+                              nextPlayerName: pIdx + 1 < 48 ? players[pickToPlayer(pIdx + 1, draftOrder)] : null,
+                              isDone: false,
+                              pickNum: pIdx + 1,
+                            })}
+                            className="text-gray-700 hover:text-green-400 transition-colors flex-shrink-0 ml-0.5"
+                            title="Share this pick"
+                          >📤</button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </aside>
+
+          {/* Main */}
+          <div className="flex-1 overflow-y-auto p-4 md:p-6">
+            {draftDone ? (
+              <div className="text-center py-20">
+                <div className="text-5xl mb-4">🎉</div>
+                <h2 className="text-2xl font-black text-white">Draft Complete!</h2>
+                <p className="text-gray-400 mt-2 text-sm">All 48 teams drafted. Head to Rosters or Scoring tabs.</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+                  <div className="flex-1">
+                    <h2 className="text-lg font-black text-white">
+                      {state.aiPlayerIdx !== null && pickToPlayer(currentPickIdx, draftOrder) === state.aiPlayerIdx
+                        ? <span className="text-blue-400">🤖 {currentPlayer}</span>
+                        : <span className="text-green-400">{currentPlayer}</span>}
+                      <span className="text-gray-500 font-normal text-sm ml-2">— Pick {currentPickIdx + 1} of 48</span>
+                    </h2>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {state.aiPlayerIdx !== null && pickToPlayer(currentPickIdx, draftOrder) === state.aiPlayerIdx
+                        ? '🤖 Claudinho is selecting the strongest available team…'
+                        : `Round ${Math.floor(currentPickIdx / 8) + 1} · snake order`}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {lastPickIdx >= 0 && (
+                      <button
+                        onClick={onUndo}
+                        className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        ↩ Undo
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Confederation filter */}
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {confs.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setConf(c)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                        confFilter === c
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Team grid */}
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+                  {displayTeams.map(team => {
+                    const isPicked = Boolean(pickedByName[team.id]);
+                    return (
+                      <button
+                        key={team.id}
+                        disabled={isPicked}
+                        onClick={() => !isPicked && onPick(team.id)}
+                        className={`
+                          relative rounded-xl p-2.5 text-left border transition-all duration-150
+                          ${isPicked
+                            ? 'opacity-35 bg-gray-800 border-gray-800 cursor-not-allowed'
+                            : `${CONF_BG[team.conf]} border-gray-700 hover:border-green-400 hover:scale-105 cursor-pointer active:scale-95`
+                          }
+                        `}
+                      >
+                        <div className="text-2xl leading-none mb-1">{team.flag}</div>
+                        <div className="text-xs font-semibold text-white leading-tight">{team.name}</div>
+                        <div className={`text-xs mt-0.5 ${CONF_COLORS[team.conf]}`}>{team.conf}</div>
+                        {isPicked && (
+                          <div className="absolute inset-0 flex items-center justify-center rounded-xl">
+                            <span className="text-xs text-gray-300 text-center px-1 font-medium leading-tight">
+                              {pickedByName[team.id]}
+                            </span>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── ROSTERS SCREEN ───────────────────────────────────────────────────────
+
+    function RostersScreen({ state }) {
+      const { players, draftOrder, picks, scores } = state;
+
+      const rosters = useMemo(() => {
+        return players.map((player, pIdx) => {
+          const teams = picks
+            .map((teamId, pickIdx) => ({ teamId, pickIdx }))
+            .filter(({ teamId, pickIdx }) => teamId && pickToPlayer(pickIdx, draftOrder) === pIdx)
+            .map(({ teamId }) => TEAM_BY_ID[teamId])
+            .filter(Boolean);
+          const total = teams.reduce((sum, t) => {
+            const s = scores[t.id] || {};
+            return sum + (s.groupPoints || 0) + (ROUND_BONUS[s.roundReached] || 0);
+          }, 0);
+          return { player, teams, total };
+        });
+      }, [players, draftOrder, picks, scores]);
+
+      const hasPicks = picks.some(p => p !== null);
+
+      return (
+        <div className="p-4 md:p-6 max-w-6xl mx-auto">
+          <h2 className="text-xl font-black text-white mb-5">Rosters</h2>
+
+          {!hasPicks && (
+            <p className="text-gray-500 text-sm">No picks yet — start the draft first.</p>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {rosters.map(({ player, teams, total }, i) => (
+              <div key={i} className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+                <div className="bg-gray-750 px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+                  <div className="font-bold text-white truncate">{player}</div>
+                  {total > 0 && (
+                    <div className="text-green-400 font-black text-sm ml-2">{total} pts</div>
+                  )}
+                </div>
+                <div className="p-3 space-y-2.5">
+                  {teams.length === 0 ? (
+                    <div className="text-gray-600 text-xs">No picks yet</div>
+                  ) : (
+                    teams.map(team => {
+                      const s = scores[team.id];
+                      return (
+                        <div key={team.id} className="flex items-center gap-2">
+                          <span className="text-xl">{team.flag}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-white font-medium truncate">{team.name}</div>
+                            {s ? (
+                              <div className="text-xs text-gray-400">
+                                {s.groupPoints} gp · {s.roundReached?.replace('Eliminated (Group Stage)', 'Elim.')}
+                              </div>
+                            ) : (
+                              <div className={`text-xs ${CONF_COLORS[team.conf]}`}>{team.conf}</div>
+                            )}
+                          </div>
+                          {s && (
+                            <div className="text-green-400 text-xs font-bold flex-shrink-0">
+                              +{(s.groupPoints || 0) + (ROUND_BONUS[s.roundReached] || 0)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Shared ESPN score sync — fetches every team's WC schedule, computes group
+    // points + furthest round, and returns merged scores. Used by both the
+    // Scoring screen and the Settings manual-sync button.
+    async function fetchESPNScores(currentScores) {
+      const teamsToFetch = TEAMS.filter(t => t.espnId);
+      const fetched = await Promise.allSettled(
+        teamsToFetch.map(t =>
+          fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/teams/${t.espnId}/schedule`)
+            .then(r => r.json())
+            .then(data => ({ team: t, events: data.events || [] }))
+        )
+      );
+
+      const newScores = { ...currentScores };
+      let updated = 0;
+      const roundOf = e => ESPN_ROUND_NAME_TO_ROUND[(e.seasonType?.name || '').toLowerCase()] || null;
+
+      for (const result of fetched) {
+        if (result.status !== 'fulfilled') continue;
+        const { team, events } = result.value;
+        const eid = String(team.espnId);
+
+        const completed = events.filter(e =>
+          e.competitions?.[0]?.status?.type?.completed === true ||
+          e.competitions?.[0]?.status?.type?.state === 'post'
+        );
+        if (completed.length === 0) continue;
+
+        // Group stage points (3 win / 1 draw)
+        const groupMatches = completed.filter(e => roundOf(e) === 'Eliminated (Group Stage)');
+        let groupPoints = 0;
+        for (const e of groupMatches) {
+          const comps = e.competitions?.[0]?.competitors || [];
+          const us   = comps.find(c => String(c.team?.id) === eid || String(c.id) === eid);
+          const them = comps.find(c => String(c.team?.id) !== eid && String(c.id) !== eid);
+          if (!us) continue;
+          const ourScore   = parseInt(us?.score?.displayValue   ?? us?.score?.value   ?? 0);
+          const theirScore = parseInt(them?.score?.displayValue  ?? them?.score?.value  ?? 0);
+          if (ourScore > theirScore)      groupPoints += 3;
+          else if (ourScore === theirScore) groupPoints += 1;
+        }
+
+        // Furthest round reached = deepest knockout match they appear in
+        let roundReached = 'Eliminated (Group Stage)';
+        let deepest = null;
+        for (const e of completed) {
+          const r = roundOf(e);
+          if (!r || r === 'Eliminated (Group Stage)') continue;
+          if (deepest === null || ROUND_ORDER[r] > ROUND_ORDER[deepest]) deepest = r;
+        }
+        if (deepest) {
+          roundReached = deepest;
+          // If they won the Final, they're the Champion (else Runner-up)
+          const finalMatch = completed.find(e => roundOf(e) === 'Runner-up');
+          if (finalMatch) {
+            const comps = finalMatch.competitions?.[0]?.competitors || [];
+            const us = comps.find(c => String(c.team?.id) === eid || String(c.id) === eid);
+            if (us?.winner || us?.score?.winner) roundReached = 'Champion';
+          }
+        }
+
+        newScores[team.id] = { groupPoints, roundReached };
+        updated++;
+      }
+
+      return { newScores, updated };
+    }
+
+
+    // ─── SCORING SCREEN ───────────────────────────────────────────────────────
+
+    function ScoringScreen({ state, onUpdateScore, onBulkUpdate }) {
+      const { scores } = state;
+      const [confFilter, setConf] = useState('All');
+      const [editing, setEditing] = useState(null);
+      const [editGP, setEditGP]   = useState(0);
+      const [editRound, setEditRd] = useState(ROUNDS[0]);
+      const [syncing, setSyncing] = React.useState(false);
+      const [syncMsg, setSyncMsg] = React.useState('');
+
+      async function syncFromESPN() {
+        setSyncing(true);
+        setSyncMsg('');
+        try {
+          const { newScores, updated } = await fetchESPNScores(scores);
+          onBulkUpdate(newScores);
+          setSyncMsg(`✓ ${updated} team${updated !== 1 ? 's' : ''} updated from ESPN`);
+        } catch (err) {
+          setSyncMsg(`Error: ${err.message}`);
+          console.error(err);
+        } finally {
+          setSyncing(false);
+        }
+      }
+
+      const confs = ['All', 'UEFA', 'CONMEBOL', 'CONCACAF', 'CAF', 'AFC', 'OFC', 'Playoff'];
+      const display = (confFilter === 'All' ? TEAMS : TEAMS.filter(t => t.conf === confFilter))
+        .slice().sort((a, b) => a.name.localeCompare(b.name));
+
+      function openEdit(team) {
+        const s = scores[team.id] || {};
+        setEditing(team);
+        setEditGP(s.groupPoints ?? 0);
+        setEditRd(s.roundReached ?? ROUNDS[0]);
+      }
+
+      function save() {
+        onUpdateScore(editing.id, { groupPoints: Math.min(9, Math.max(0, Number(editGP))), roundReached: editRound });
+        setEditing(null);
+      }
+
+      const entered = Object.keys(scores).length;
+
+      return (
+        <div className="p-4 md:p-6 max-w-5xl mx-auto">
+          <div className="flex items-start justify-between mb-1">
+            <h2 className="text-xl font-black text-white">Tournament Scoring</h2>
+            <span className="text-xs text-gray-500 mt-1">{entered}/48 entered</span>
+          </div>
+
+          <div className="flex items-center gap-3 mb-3">
+            <button
+              onClick={syncFromESPN}
+              disabled={syncing}
+              className="flex items-center gap-2 bg-blue-700 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors"
+            >
+              {syncing ? (
+                <><span className="animate-spin inline-block">⟳</span> Syncing…</>
+              ) : (
+                <>⚡ Sync from ESPN</>
+              )}
+            </button>
+            {syncMsg && (
+              <span className={`text-xs ${syncMsg.startsWith('✓') ? 'text-green-400' : 'text-red-400'}`}>
+                {syncMsg}
+              </span>
+            )}
+          </div>
+
+          <div className="text-xs text-gray-500 mb-1">
+            Sync pulls live WC results from ESPN. You can also click any team to edit manually.
+          </div>
+          <div className="text-xs text-gray-600 mb-4">
+            Round bonuses: R32 <span className="text-gray-400">+8</span> · R16 <span className="text-gray-400">+14</span> · QF <span className="text-gray-400">+22</span> · SF <span className="text-gray-400">+32</span> · Bronze <span className="text-gray-400">+38</span> · Champion <span className="text-gray-400">+55</span>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {confs.map(c => (
+              <button
+                key={c}
+                onClick={() => setConf(c)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  confFilter === c ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {display.map(team => {
+              const s = scores[team.id];
+              const total = s ? (s.groupPoints || 0) + (ROUND_BONUS[s.roundReached] || 0) : null;
+              return (
+                <div
+                  key={team.id}
+                  onClick={() => openEdit(team)}
+                  className="flex items-center gap-3 bg-gray-800 border border-gray-700 hover:border-green-500 rounded-xl p-3 cursor-pointer transition-colors"
+                >
+                  <span className="text-2xl flex-shrink-0">{team.flag}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-white truncate">{team.name}</div>
+                    {s ? (
+                      <div className="text-xs text-gray-400 truncate">
+                        {s.groupPoints} GP pts · {s.roundReached?.replace('Eliminated (Group Stage)', 'Elim.')}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-600">Not entered</div>
+                    )}
+                  </div>
+                  {total !== null ? (
+                    <div className="text-green-400 font-black text-sm flex-shrink-0">{total}</div>
+                  ) : (
+                    <div className="text-gray-700 text-xs flex-shrink-0">—</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Edit modal */}
+          {editing && (
+            <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={e => { if (e.target === e.currentTarget) setEditing(null); }}>
+              <div className="bg-gray-800 rounded-2xl p-6 w-full max-w-sm border border-gray-600 shadow-2xl">
+                <div className="flex items-center gap-3 mb-5">
+                  <span className="text-4xl">{editing.flag}</span>
+                  <div>
+                    <h3 className="text-lg font-black text-white">{editing.name}</h3>
+                    <div className={`text-sm ${CONF_COLORS[editing.conf]}`}>{editing.conf}</div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs text-gray-400 uppercase tracking-wide mb-1.5">
+                      Group Stage Points (0–9)
+                    </label>
+                    <input
+                      type="number"
+                      min="0" max="9"
+                      value={editGP}
+                      onChange={e => setEditGP(e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2.5 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    <div className="text-xs text-gray-600 mt-1">3 matches × (W=3, D=1, L=0) = max 9</div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-400 uppercase tracking-wide mb-1.5">
+                      Furthest Round Reached
+                    </label>
+                    <select
+                      value={editRound}
+                      onChange={e => setEditRd(e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      {ROUNDS.map(r => (
+                        <option key={r} value={r}>{r}  (+{ROUND_BONUS[r]} pts)</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="bg-gray-700/50 rounded-lg px-4 py-3 text-center">
+                    <div className="text-xs text-gray-400">Total team score</div>
+                    <div className="text-3xl font-black text-green-400 mt-0.5">
+                      {Math.min(9, Math.max(0, Number(editGP))) + (ROUND_BONUS[editRound] || 0)}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {Math.min(9, Math.max(0, Number(editGP)))} group + {ROUND_BONUS[editRound] || 0} bonus
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-5">
+                  <button
+                    onClick={() => setEditing(null)}
+                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-xl py-2.5 text-sm transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={save}
+                    className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl py-2.5 text-sm transition-colors"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ─── LEADERBOARD SCREEN ───────────────────────────────────────────────────
+
+    function LeaderboardScreen({ state }) {
+      const { players, draftOrder, picks, scores } = state;
+      const [expanded, setExpanded] = useState(null);
+
+      const board = useMemo(() => {
+        return players.map((player, pIdx) => {
+          const breakdown = picks
+            .map((teamId, pickIdx) => ({ teamId, pickIdx }))
+            .filter(({ teamId, pickIdx }) => teamId && pickToPlayer(pickIdx, draftOrder) === pIdx)
+            .map(({ teamId }) => {
+              const team = TEAM_BY_ID[teamId];
+              const s    = scores[teamId] || {};
+              const gp   = s.groupPoints || 0;
+              const rb   = ROUND_BONUS[s.roundReached] || 0;
+              return { team, gp, rb, subtotal: gp + rb };
+            });
+          const total = breakdown.reduce((s, b) => s + b.subtotal, 0);
+          return { player, breakdown, total };
+        }).sort((a, b) => b.total - a.total);
+      }, [players, draftOrder, picks, scores]);
+
+      const medals = ['🥇', '🥈', '🥉'];
+      const hasAnyScore = Object.keys(scores).length > 0;
+
+      return (
+        <div className="p-4 md:p-6 max-w-2xl mx-auto">
+          <h2 className="text-xl font-black text-white mb-5">Leaderboard</h2>
+
+          {!hasAnyScore && (
+            <p className="text-gray-500 text-sm mb-4">Scores will appear here once you enter results on the Scoring tab.</p>
+          )}
+
+          <div className="space-y-2">
+            {board.map(({ player, breakdown, total }, rank) => (
+              <div key={player} className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
+                <div
+                  className="flex items-center gap-4 px-4 py-3.5 cursor-pointer hover:bg-gray-700/40 transition-colors"
+                  onClick={() => setExpanded(expanded === player ? null : player)}
+                >
+                  <div className="text-xl w-7 text-center flex-shrink-0">
+                    {rank < 3 ? medals[rank] : <span className="text-gray-600 font-bold text-sm">{rank + 1}</span>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-white">{player}</div>
+                    <div className="text-xs text-gray-500">{breakdown.length} teams · tap to expand</div>
+                  </div>
+                  <div className="text-2xl font-black text-green-400 flex-shrink-0">{total}</div>
+                  <div className="text-gray-600 text-xs">{expanded === player ? '▲' : '▼'}</div>
+                </div>
+
+                {expanded === player && (
+                  <div className="border-t border-gray-700 px-4 py-3">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-xs text-gray-600 uppercase tracking-wider">
+                          <th className="text-left pb-2">Team</th>
+                          <th className="text-right pb-2">Group</th>
+                          <th className="text-right pb-2">Bonus</th>
+                          <th className="text-right pb-2">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...breakdown].sort((a, b) => b.subtotal - a.subtotal).map(({ team, gp, rb, subtotal }) => (
+                          <tr key={team.id} className="border-t border-gray-700/50">
+                            <td className="py-1.5 text-gray-200">
+                              <span className="mr-1.5">{team.flag}</span>{team.name}
+                            </td>
+                            <td className="text-right text-gray-400">{gp || '—'}</td>
+                            <td className="text-right text-gray-400">{rb > 0 ? `+${rb}` : '—'}</td>
+                            <td className="text-right font-bold text-green-400">{subtotal || 0}</td>
+                          </tr>
+                        ))}
+                        <tr className="border-t border-gray-600 mt-1">
+                          <td colSpan="3" className="pt-2 text-right text-gray-400 text-xs uppercase tracking-wide">Total</td>
+                          <td className="text-right pt-2 font-black text-green-400 text-xl">{total}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+
+    // WC 2026 venue coordinates, keyed by ESPN's exact venue.fullName.
+    // Used to fetch day-of-match forecasts from Open-Meteo (free, no key).
+    const VENUE_COORDS = {
+      'MetLife Stadium':                 { lat: 40.8128, lon: -74.0742 },
+      'AT&T Stadium':                    { lat: 32.7473, lon: -97.0945 },
+      'Mercedes-Benz Stadium':           { lat: 33.7555, lon: -84.4008 },
+      'NRG Stadium':                     { lat: 29.6847, lon: -95.4107 },
+      'GEHA Field at Arrowhead Stadium': { lat: 39.0489, lon: -94.4839 },
+      'SoFi Stadium':                    { lat: 33.9535, lon: -118.3392 },
+      'Hard Rock Stadium':               { lat: 25.9580, lon: -80.2389 },
+      'Lincoln Financial Field':         { lat: 39.9008, lon: -75.1675 },
+      "Levi's Stadium":                  { lat: 37.4030, lon: -121.9698 },
+      'Lumen Field':                     { lat: 47.5952, lon: -122.3316 },
+      'Gillette Stadium':                { lat: 42.0909, lon: -71.2643 },
+      'BMO Field':                       { lat: 43.6332, lon: -79.4185 },
+      'BC Place':                        { lat: 49.2768, lon: -123.1119 },
+      'Estadio Banorte':                 { lat: 19.3029, lon: -99.1505 },
+      'Estadio Akron':                   { lat: 20.6817, lon: -103.4626 },
+      'Estadio BBVA':                    { lat: 25.6692, lon: -100.2444 },
+    };
+
+    // WMO weather code → { emoji, label }
+    function wmoWeather(code) {
+      if (code === 0) return { emoji: '☀️', label: 'Clear' };
+      if (code === 1) return { emoji: '🌤️', label: 'Mainly clear' };
+      if (code === 2) return { emoji: '⛅', label: 'Partly cloudy' };
+      if (code === 3) return { emoji: '☁️', label: 'Overcast' };
+      if (code === 45 || code === 48) return { emoji: '🌫️', label: 'Fog' };
+      if (code >= 51 && code <= 57) return { emoji: '🌦️', label: 'Drizzle' };
+      if (code >= 61 && code <= 67) return { emoji: '🌧️', label: 'Rain' };
+      if (code >= 71 && code <= 77) return { emoji: '🌨️', label: 'Snow' };
+      if (code >= 80 && code <= 82) return { emoji: '🌦️', label: 'Showers' };
+      if (code === 85 || code === 86) return { emoji: '🌨️', label: 'Snow showers' };
+      if (code >= 95) return { emoji: '⛈️', label: 'Thunderstorm' };
+      return { emoji: '🌡️', label: '' };
+    }
+
+
+    // ─── FIXTURES SCREEN ──────────────────────────────────────────────────────
+
+    function FixturesScreen({ state }) {
+      const { players, draftOrder, picks } = state;
+      const [fixtures, setFixtures] = React.useState(null);
+      const [loading, setLoading]   = React.useState(true);
+      const [error, setError]       = React.useState('');
+      // weather[venueName] = { offset: utcOffsetSeconds, days: { 'YYYY-MM-DD': {code,hi,lo,precip} } }
+      const [weather, setWeather]   = React.useState({});
+
+      const ownerByTeamId = React.useMemo(() => {
+        const m = {};
+        picks.forEach((teamId, idx) => {
+          if (teamId) m[teamId] = players[pickToPlayer(idx, draftOrder)];
+        });
+        return m;
+      }, [picks, draftOrder, players]);
+
+      const [sharing, setSharing] = React.useState(false);
+      const [shareMsg, setShareMsg] = React.useState('');
+
+      // Build a WhatsApp-ready recap (latest results + next fixtures + standings),
+      // with owners pulled straight from the draft data so they're always correct.
+      async function shareRecap() {
+        setSharing(true); setShareMsg('');
+        try {
+          const dayStr = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+          const now = new Date();
+          const dates = [-2,-1,0,1].map(o => dayStr(new Date(now.getTime() + o*86400000)));
+          const res = await Promise.allSettled(dates.map(dt =>
+            fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${dt}`).then(r => r.json())
+          ));
+
+          const byDate = {};
+          for (const r of res) {
+            if (r.status !== 'fulfilled') continue;
+            for (const e of (r.value?.events || [])) {
+              const key = new Date(e.date).toLocaleDateString('en-CA');
+              (byDate[key] = byDate[key] || []).push(e);
+            }
+          }
+
+          const info = c => {
+            const id = String(c?.team?.id ?? '');
+            const t = TEAM_BY_ESPN[id];
+            return {
+              flag: t?.flag || '', name: t?.name || c?.team?.shortDisplayName || c?.team?.displayName || '?',
+              owner: t ? ownerByTeamId[t.id] : null,
+              score: c?.score?.displayValue ?? c?.score?.value ?? c?.score ?? '',
+            };
+          };
+          // A quick, witty one-line take on a finished match (randomised for variety)
+          const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+          const commentary = (a, h) => {
+            const ag = parseInt(a.score) || 0, hg = parseInt(h.score) || 0;
+            const total = ag + hg, margin = Math.abs(ag - hg);
+            const W = (ag > hg ? a : h).name, L = (ag > hg ? h : a).name;
+            if (margin === 0) {
+              return total === 0
+                ? pick(['Goalless arm-wrestle — a point each. 😴', 'Nil-nil, chances at a premium. 🤝', 'No goals, no winner, no fun. ⚖️'])
+                : pick([`${a.name} and ${h.name} trade blows — honours even. 🤝`, `A ${total}-goal handshake. Spoils split. ⚖️`, `Nobody blinked — a point apiece. 🔁`]);
+            }
+            if (margin >= 4) return pick([`${W} run riot — ${L} put to the sword. ⚔️`, `Statement made. ${W} romp, ${L} routed. 🌪️`, `${W} hand ${L} a hiding. 😤`, `No hosting mood from ${W} — ${L} sent packing. 🧳`]);
+            if (margin === 3) return pick([`${W} cruise at a canter. 🐎`, `Comfortable afternoon for ${W}. 🛳️`, `${W} win it with room to spare. 💪`]);
+            if (total >= 4)   return pick([`${W} edge a ${total}-goal slugfest. Nobody blinked. 🥊`, `Haymakers traded — ${W} land the last one. 🎢`, `End-to-end chaos, ${W} on the right side of it. ⚡`]);
+            if (total === 1)  return pick([`${W} pull off the smash-and-grab — one goal, three points, no fuss. 🪡`, `${W} nick it by the only goal. 🔒`, `${W} grind out a 1–0. 🧱`]);
+            return pick([`${W} take care of business vs ${L}. ✅`, `${W} get the job done. 👏`, `${W} edge it. 🙌`, `Big three points for ${W}. 📈`]);
+          };
+          const sides = e => {
+            const cs = e.competitions?.[0]?.competitors || [];
+            return { home: cs.find(c => c.homeAway === 'home') || cs[0], away: cs.find(c => c.homeAway === 'away') || cs[1] };
+          };
+          const dateLabel = key => new Date(key + 'T12:00:00').toLocaleDateString('en', { weekday: 'short', month: 'long', day: 'numeric' });
+          const tz = (() => { try { return new Intl.DateTimeFormat('en', { timeZoneName: 'short' }).formatToParts(now).find(p => p.type === 'timeZoneName')?.value || ''; } catch { return ''; } })();
+
+          const todayKey = now.toLocaleDateString('en-CA');
+          const keys = Object.keys(byDate).sort();
+
+          let resultsKey = null;
+          for (const k of keys) {
+            if (k > todayKey) continue;
+            if (byDate[k].some(e => { const s = e.competitions?.[0]?.status?.type; return s?.completed || s?.state === 'post'; })) resultsKey = k;
+          }
+          let fixturesKey = null;
+          for (const k of keys) {
+            if (k < todayKey) continue;
+            if (byDate[k].some(e => { const s = e.competitions?.[0]?.status?.type?.state; return s === 'pre' || s === 'in'; })) { fixturesKey = k; break; }
+          }
+
+          const lines = ['🌵 BAJA BOYZ NMNT — WORLD CUP 2026 🌵', ''];
+
+          if (resultsKey) {
+            const done = byDate[resultsKey]
+              .filter(e => { const s = e.competitions?.[0]?.status?.type; return s?.completed || s?.state === 'post'; })
+              .sort((a, b) => new Date(a.date) - new Date(b.date));
+            lines.push(`📊 RESULTS — ${dateLabel(resultsKey)}`, '');
+            const goals = done.reduce((s, e) => {
+              const { home, away } = sides(e);
+              return s + (parseInt(info(away).score) || 0) + (parseInt(info(home).score) || 0);
+            }, 0);
+            if (done.length) {
+              lines.push(pick([
+                `${goals} goals across ${done.length} game${done.length > 1 ? 's' : ''}. Buckle up. 🎢`,
+                `${done.length} game${done.length > 1 ? 's' : ''}, ${goals} goals. Let's relive it. 🍿`,
+                `${goals} goals on the day — not a bad watch. ⚽️`,
+              ]), '');
+            }
+            for (const e of done) {
+              const { home, away } = sides(e); const a = info(away), h = info(home);
+              lines.push(`⚽️ ${a.flag} ${a.name} ${a.score}–${h.score} ${h.name} ${h.flag}`);
+              lines.push(`     ${commentary(a, h)}`);
+              lines.push(`     (${a.owner || '—'} / ${h.owner || '—'})`);
+            }
+            lines.push('');
+          }
+
+          if (fixturesKey) {
+            const up = byDate[fixturesKey]
+              .filter(e => { const s = e.competitions?.[0]?.status?.type?.state; return s === 'pre' || s === 'in'; })
+              .sort((a, b) => new Date(a.date) - new Date(b.date));
+            lines.push(`📅 ${fixturesKey === todayKey ? 'TODAY' : 'NEXT UP'} — ${dateLabel(fixturesKey)}${tz ? ` (${tz})` : ''}`, '');
+            for (const e of up) {
+              const { home, away } = sides(e); const a = info(away), h = info(home);
+              const t = new Date(e.date).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' });
+              lines.push(`⚽️ ${t} — ${a.flag} ${a.name} vs ${h.name} ${h.flag} (${a.owner || '—'} / ${h.owner || '—'})`);
+            }
+            lines.push('');
+          }
+
+          // Standings from draft + scores
+          const pts = {};
+          players.forEach(p => { pts[p] = 0; });
+          picks.forEach((tid) => {
+            if (!tid) return;
+            const s = (state.scores || {})[tid] || {};
+            pts[ownerByTeamId[tid]] += (s.groupPoints || 0) + (ROUND_BONUS[s.roundReached] || 0);
+          });
+          const standings = Object.entries(pts).sort((a, b) => b[1] - a[1]);
+          const medals = ['🥇', '🥈', '🥉'];
+          lines.push('🏆 STANDINGS');
+          standings.forEach(([p, v], i) => lines.push(`${medals[i] || `${i + 1}.`} ${p} — ${v}`));
+          lines.push('', '¡Vámonos, Boyz! 🏆');
+
+          const msg = lines.join('\n');
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+          if (isMobile) {
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+            setShareMsg('Opening WhatsApp…');
+          } else {
+            await navigator.clipboard.writeText(msg).then(
+              () => setShareMsg('✓ Copied! Paste into WhatsApp'),
+              () => window.prompt('Copy this recap:', msg)
+            );
+          }
+          setTimeout(() => setShareMsg(''), 4000);
+        } catch (err) {
+          setShareMsg(`Error: ${err.message}`);
+        } finally {
+          setSharing(false);
+        }
+      }
+
+      React.useEffect(() => {
+        let cancelled = false;
+        (async () => {
+          setLoading(true); setError('');
+          try {
+            // Build a rolling 16-day window of dates from today (YYYYMMDD)
+            const dates = [];
+            const start = new Date();
+            for (let i = 0; i < 16; i++) {
+              const d = new Date(start.getTime() + i * 86400000);
+              dates.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`);
+            }
+            const results = await Promise.allSettled(
+              dates.map(dt =>
+                fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${dt}`)
+                  .then(r => r.json())
+              )
+            );
+            const events = [];
+            for (const res of results) {
+              if (res.status !== 'fulfilled') continue;
+              for (const e of (res.value?.events || [])) {
+                const st = e.competitions?.[0]?.status?.type;
+                // Upcoming or live only — skip finished matches
+                if (st?.state === 'post' || st?.completed) continue;
+                const comps = e.competitions?.[0]?.competitors || [];
+                const home = comps.find(c => c.homeAway === 'home') || comps[0];
+                const away = comps.find(c => c.homeAway === 'away') || comps[1];
+                const venue = e.competitions?.[0]?.venue || e.venue || {};
+                events.push({
+                  id: e.id,
+                  date: new Date(e.date),
+                  state: st?.state,
+                  detail: st?.shortDetail,
+                  round: e.seasonType?.name || '',
+                  home, away,
+                  homeScore: home?.score?.displayValue ?? home?.score?.value,
+                  awayScore: away?.score?.displayValue ?? away?.score?.value,
+                  venueName: venue.fullName || '',
+                  city: venue.address?.city || '',
+                  country: venue.address?.country || '',
+                });
+              }
+            }
+            // De-dupe by event id, sort by kickoff
+            const seen = new Set();
+            const deduped = events.filter(e => (seen.has(e.id) ? false : seen.add(e.id)));
+            deduped.sort((a, b) => a.date - b.date);
+            if (!cancelled) setFixtures(deduped);
+          } catch (err) {
+            if (!cancelled) setError(err.message || 'Failed to load fixtures');
+          } finally {
+            if (!cancelled) setLoading(false);
+          }
+        })();
+        return () => { cancelled = true; };
+      }, []);
+
+      // Fetch day-of-match forecasts (Open-Meteo, free/no-key) once fixtures load.
+      // One request per unique venue covers all of that venue's fixtures.
+      React.useEffect(() => {
+        if (!fixtures || fixtures.length === 0) return;
+        let cancelled = false;
+        (async () => {
+          const venues = [...new Set(fixtures.map(f => f.venueName).filter(v => VENUE_COORDS[v]))];
+          const entries = await Promise.allSettled(venues.map(async name => {
+            const { lat, lon } = VENUE_COORDS[name];
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+              + `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max`
+              + `&temperature_unit=fahrenheit&timezone=auto&forecast_days=16`;
+            const d = await fetch(url).then(r => r.json());
+            const days = {};
+            (d.daily?.time || []).forEach((date, i) => {
+              days[date] = {
+                code:   d.daily.weather_code?.[i],
+                hi:     Math.round(d.daily.temperature_2m_max?.[i]),
+                lo:     Math.round(d.daily.temperature_2m_min?.[i]),
+                precip: d.daily.precipitation_probability_max?.[i],
+              };
+            });
+            return [name, { offset: d.utc_offset_seconds || 0, days }];
+          }));
+          if (cancelled) return;
+          const next = {};
+          for (const e of entries) if (e.status === 'fulfilled') next[e.value[0]] = e.value[1];
+          setWeather(next);
+        })();
+        return () => { cancelled = true; };
+      }, [fixtures]);
+
+      // Look up a fixture's forecast for its venue-local match day
+      function fixtureWeather(f) {
+        const w = weather[f.venueName];
+        if (!w) return null;
+        const localDate = new Date(f.date.getTime() + w.offset * 1000).toISOString().slice(0, 10);
+        return w.days[localDate] || null;
+      }
+
+      function teamCell(comp, score, align) {
+        const espnId = String(comp?.team?.id ?? comp?.id ?? '');
+        const team = TEAM_BY_ESPN[espnId];
+        const flag = team?.flag || '';
+        const name = team?.name || comp?.team?.shortDisplayName || comp?.team?.displayName || 'TBD';
+        const owner = team ? ownerByTeamId[team.id] : null;
+        return (
+          <div className={`flex-1 min-w-0 flex items-center gap-2 ${align === 'right' ? 'flex-row-reverse text-right' : ''}`}>
+            <span className="text-2xl flex-shrink-0">{flag}</span>
+            <div className="min-w-0">
+              <div className="font-bold text-white text-sm truncate">{name}</div>
+              {owner && <div className="text-[11px] text-green-400 truncate">{owner}</div>}
+            </div>
+          </div>
+        );
+      }
+
+      // Group fixtures by local calendar day
+      const groups = [];
+      if (fixtures) {
+        const byDay = {};
+        for (const f of fixtures) {
+          const key = f.date.toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' });
+          (byDay[key] = byDay[key] || []).push(f);
+        }
+        for (const f of fixtures) {
+          const key = f.date.toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' });
+          if (!groups.find(g => g.key === key)) groups.push({ key, items: byDay[key] });
+        }
+      }
+
+      const tz = (() => {
+        try { return new Intl.DateTimeFormat('en', { timeZoneName: 'short' }).formatToParts(new Date()).find(p => p.type === 'timeZoneName')?.value || ''; }
+        catch { return ''; }
+      })();
+
+      return (
+        <div className="p-4 md:p-6 max-w-2xl mx-auto">
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="text-xl font-black text-white">Upcoming Fixtures</h2>
+            {tz && <span className="text-xs text-gray-500">times shown in {tz}</span>}
+          </div>
+
+          <div className="flex items-center gap-3 mb-5">
+            <button
+              onClick={shareRecap}
+              disabled={sharing}
+              className="flex items-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors"
+            >
+              {sharing
+                ? <><span className="animate-spin inline-block">⟳</span> Building…</>
+                : <>📲 Share recap + fixtures</>}
+            </button>
+            {shareMsg && <span className={`text-xs ${shareMsg.startsWith('✓') || shareMsg.startsWith('Opening') ? 'text-green-400' : 'text-red-400'}`}>{shareMsg}</span>}
+          </div>
+
+          {loading && <p className="text-gray-500 text-sm">Loading fixtures from ESPN…</p>}
+          {error && <p className="text-red-400 text-sm">Error: {error}</p>}
+          {!loading && !error && fixtures && fixtures.length === 0 && (
+            <p className="text-gray-500 text-sm">No upcoming matches in the next 16 days.</p>
+          )}
+
+          <div className="space-y-6">
+            {groups.map(({ key, items }) => (
+              <div key={key}>
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{key}</h3>
+                <div className="space-y-2">
+                  {items.map(f => {
+                    const live = f.state === 'in';
+                    return (
+                      <div key={f.id} className="bg-gray-800 border border-gray-700 rounded-xl px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          {teamCell(f.home, f.homeScore, 'left')}
+                          <div className="flex-shrink-0 text-center px-1 min-w-[64px]">
+                            {live ? (
+                              <>
+                                <div className="text-base font-black text-white">{f.homeScore ?? 0}–{f.awayScore ?? 0}</div>
+                                <div className="text-[10px] font-bold text-red-400 animate-pulse">● {f.detail || 'LIVE'}</div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="text-sm font-black text-white">{f.date.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}</div>
+                                <div className="text-[10px] text-gray-500">vs</div>
+                              </>
+                            )}
+                          </div>
+                          {teamCell(f.away, f.awayScore, 'right')}
+                        </div>
+                        {f.round && f.round !== 'Group Stage' && (
+                          <div className="text-center text-[10px] text-gray-500 mt-1.5 uppercase tracking-wide">{f.round}</div>
+                        )}
+                        {(f.venueName || fixtureWeather(f)) && (
+                          <div className="mt-2 pt-2 border-t border-gray-700/60 flex items-center justify-between gap-2">
+                            <div className="min-w-0 text-[11px] truncate">
+                              {f.venueName && <span className="text-gray-300">📍 {f.venueName}</span>}
+                              {f.city && <span className="text-gray-500"> · {f.city}{f.country ? `, ${f.country}` : ''}</span>}
+                            </div>
+                            {(() => {
+                              const wx = fixtureWeather(f);
+                              if (!wx || wx.hi == null) return null;
+                              const { emoji, label } = wmoWeather(wx.code);
+                              return (
+                                <div className="flex-shrink-0 flex items-center gap-1 text-[11px] text-gray-300" title={label}>
+                                  <span className="text-sm">{emoji}</span>
+                                  <span className="font-semibold">{wx.hi}°</span>
+                                  <span className="text-gray-500">/{wx.lo}°</span>
+                                  {wx.precip != null && wx.precip >= 30 && <span className="text-blue-400">💧{wx.precip}%</span>}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+
+    // ─── GALLERY SCREEN ───────────────────────────────────────────────────────
+
+    function GalleryScreen() {
+      const [photos, setPhotos]   = React.useState(null);
+      const [loading, setLoading] = React.useState(true);
+      const [error, setError]     = React.useState('');
+      const [lightbox, setLightbox] = React.useState(null);
+      const [filter, setFilter]   = React.useState('All');
+
+      const teamOptions = React.useMemo(
+        () => TEAMS.filter(t => t.espnId).slice().sort((a, b) => a.name.localeCompare(b.name)),
+        []
+      );
+
+      React.useEffect(() => {
+        let cancelled = false;
+        (async () => {
+          setLoading(true); setError('');
+          try {
+            const team = filter !== 'All' ? TEAM_BY_ID[filter] : null;
+            const url = team
+              ? `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/news?team=${team.espnId}&limit=40`
+              : 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/news?limit=50';
+            const data = await fetch(url).then(r => r.json());
+            const seen = new Set();
+            const out = [];
+            for (const a of (data.articles || [])) {
+              const link = a.links?.web?.href || a.links?.mobile?.href || null;
+              for (const im of (a.images || [])) {
+                const url = im.url || '';
+                // Real editorial photos only (skip video/motion thumbnails)
+                if (!url.includes('/photo/') || seen.has(url)) continue;
+                seen.add(url);
+                out.push({
+                  url,
+                  caption: im.caption || a.headline || im.name || '',
+                  credit: im.credit || '',
+                  headline: a.headline || '',
+                  date: a.published ? new Date(a.published) : null,
+                  link,
+                });
+              }
+            }
+            out.sort((x, y) => (y.date?.getTime() || 0) - (x.date?.getTime() || 0));
+            if (!cancelled) setPhotos(out);
+          } catch (err) {
+            if (!cancelled) setError(err.message || 'Failed to load photos');
+          } finally {
+            if (!cancelled) setLoading(false);
+          }
+        })();
+        return () => { cancelled = true; };
+      }, [filter]);
+
+      return (
+        <div className="p-4 md:p-6 max-w-5xl mx-auto">
+          <div className="flex items-baseline justify-between mb-1">
+            <h2 className="text-xl font-black text-white">Match Gallery</h2>
+            {photos && <span className="text-xs text-gray-500">{photos.length} photos</span>}
+          </div>
+          <p className="text-xs text-gray-500 mb-3">Latest World Cup photos via ESPN · tap to enlarge</p>
+
+          <div className="mb-5">
+            <select
+              value={filter}
+              onChange={e => setFilter(e.target.value)}
+              className="bg-gray-800 border border-gray-700 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-green-500 cursor-pointer"
+            >
+              <option value="All">📸 All teams</option>
+              {teamOptions.map(t => (
+                <option key={t.id} value={t.id}>{t.flag} {t.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {loading && <p className="text-gray-500 text-sm">Loading photos…</p>}
+          {error && <p className="text-red-400 text-sm">Error: {error}</p>}
+          {!loading && !error && photos && photos.length === 0 && (
+            <p className="text-gray-500 text-sm">No photos available right now.</p>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+            {(photos || []).map((p, i) => (
+              <button
+                key={i}
+                onClick={() => setLightbox(p)}
+                className="group relative aspect-video rounded-xl overflow-hidden bg-gray-800 border border-gray-700 hover:border-green-500 transition-colors"
+              >
+                <img src={p.url} alt={p.caption} loading="lazy"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-2 pt-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <p className="text-white text-[11px] font-semibold leading-snug line-clamp-2">{p.caption}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {lightbox && (
+            <div
+              className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+              onClick={() => setLightbox(null)}
+            >
+              <button
+                onClick={() => setLightbox(null)}
+                className="absolute top-4 right-4 text-white/70 hover:text-white text-3xl leading-none w-10 h-10 flex items-center justify-center"
+              >×</button>
+              <div className="max-w-4xl w-full" onClick={e => e.stopPropagation()}>
+                <img src={lightbox.url} alt={lightbox.caption}
+                  className="w-full max-h-[75vh] object-contain rounded-lg" />
+                <div className="mt-3 text-center">
+                  <p className="text-white text-sm font-semibold">{lightbox.caption}</p>
+                  {lightbox.credit && <p className="text-gray-500 text-xs mt-1">{lightbox.credit}</p>}
+                  {lightbox.link && (
+                    <a href={lightbox.link} target="_blank" rel="noopener noreferrer"
+                      className="inline-block mt-2 text-green-400 hover:text-green-300 text-xs font-bold">
+                      Read on ESPN →
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+
+    // ─── GROUPS SCREEN ────────────────────────────────────────────────────────
+
+    function GroupsScreen({ state }) {
+      const { players, draftOrder, picks, scores } = state;
+      const [selectedTeam, setSelectedTeam] = React.useState(null);
+
+      const pickedByName = useMemo(() => {
+        const m = {};
+        picks.forEach((teamId, idx) => {
+          if (teamId) m[teamId] = players[pickToPlayer(idx, draftOrder)];
+        });
+        return m;
+      }, [picks, draftOrder, players]);
+
+      const gp = team => scores?.[team.id]?.groupPoints || 0;
+
+      const grouped = useMemo(() => {
+        const g = {};
+        TEAMS.forEach(t => {
+          if (!g[t.group]) g[t.group] = [];
+          g[t.group].push(t);
+        });
+        // Sort each group by group-stage points (standings), tiebreak by FIFA rank
+        Object.values(g).forEach(arr => arr.sort((a, b) =>
+          gp(b) - gp(a) || (a.rank || 999) - (b.rank || 999)
+        ));
+        return g;
+      }, [scores]);
+
+      const GROUP_LABELS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+      const drafted = picks.filter(p => p !== null).length;
+      const anyPoints = scores && Object.values(scores).some(s => (s?.groupPoints || 0) > 0);
+
+      return (
+        <div className="p-4 md:p-6 max-w-6xl mx-auto">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xl font-black text-white">Group Stage Standings</h2>
+            <span className="text-xs text-gray-500">{drafted}/48 teams drafted</span>
+          </div>
+          <p className="text-xs text-gray-500 mb-4">
+            {anyPoints
+              ? <><span className="text-green-500 font-bold">Green</span> = top 2 (advancing) · ordered by points · sync results on the Scoring tab</>
+              : <>Standings update once results are synced on the Scoring tab.</>}
+          </p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {GROUP_LABELS.map(grp => (
+              <div key={grp} className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
+                <div className="px-3 py-2 border-b border-gray-700 flex items-center justify-between bg-gray-750">
+                  <span className="font-black text-white text-base">Group {grp}</span>
+                  <span className="text-xs text-gray-500">
+                    {grouped[grp]?.filter(t => !pickedByName[t.id]).length} left
+                  </span>
+                </div>
+                <div className="p-2 space-y-1">
+                  {grouped[grp]?.map((team, i) => {
+                    const drafter = pickedByName[team.id];
+                    const pts = gp(team);
+                    return (
+                      <div
+                        key={team.id}
+                        onClick={() => setSelectedTeam(team)}
+                        className={`flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors cursor-pointer ${
+                          drafter ? 'bg-gray-700/30 hover:bg-gray-700/60' : 'bg-gray-700/50 hover:bg-gray-700'
+                        }`}
+                      >
+                        <span className={`w-3 flex-shrink-0 text-center font-mono text-[11px] font-bold ${i < 2 ? 'text-green-500' : 'text-gray-600'}`}>{i + 1}</span>
+                        <span className="text-lg flex-shrink-0">{team.flag}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className={`text-xs truncate ${drafter ? 'font-bold text-white' : 'font-semibold text-white'}`}>
+                            {team.name}
+                          </div>
+                          {drafter ? (
+                            <div className="text-xs text-green-400 truncate">{drafter}</div>
+                          ) : (
+                            <div className={`text-xs ${CONF_COLORS[team.conf]}`}>{team.conf}</div>
+                          )}
+                        </div>
+                        <div className="flex-shrink-0 text-right leading-none">
+                          <div className={`text-sm font-black ${pts > 0 ? 'text-white' : 'text-gray-600'}`}>{pts}</div>
+                          <div className="text-[9px] text-gray-500 uppercase tracking-wide">pts</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {selectedTeam && (
+            <TeamDetailModal
+              team={selectedTeam}
+              drafter={pickedByName[selectedTeam.id]}
+              onClose={() => setSelectedTeam(null)}
+            />
+          )}
+        </div>
+      );
+    }
+
+
+
+
+    // ─── RANKINGS SCREEN ──────────────────────────────────────────────────────
+
+    function RankingsScreen({ state }) {
+      const [filter, setFilter]   = React.useState('All');
+      const [expanded, setExpanded] = React.useState(null);
+      const [espnCache, setCache] = React.useState({});
+      const [loading, setLoading] = React.useState({});
+
+      const pickedByName = React.useMemo(() => {
+        const m = {};
+        state.picks.forEach((teamId, idx) => {
+          if (teamId) m[teamId] = state.players[pickToPlayer(idx, state.draftOrder)];
+        });
+        return m;
+      }, [state.picks, state.draftOrder, state.players]);
+
+      async function fetchTeam(team) {
+        if (!team.espnId || espnCache[team.id]) return;
+        setLoading(l => ({ ...l, [team.id]: true }));
+        try {
+          const [schedRes, newsRes] = await Promise.allSettled([
+            fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/all/teams/${team.espnId}/schedule`).then(r => r.json()),
+            fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/all/news?team=${team.espnId}&limit=10`).then(r => r.json()),
+          ]);
+
+          // Recent results + upcoming
+          let results = [], upcoming = [];
+          if (schedRes.status === 'fulfilled' && Array.isArray(schedRes.value?.events)) {
+            const espnId = String(team.espnId);
+            const events = schedRes.value.events;
+
+            const getScore = c => parseInt(c?.score?.displayValue ?? c?.score?.value ?? c?.score ?? 0);
+            const getStatus = e => e.competitions?.[0]?.status?.type;
+
+            results = events
+              .filter(e => getStatus(e)?.completed === true || getStatus(e)?.state === 'post')
+              .slice(-8).reverse().slice(0, 5)
+              .map(e => {
+                const comps = e.competitions?.[0]?.competitors || [];
+                const us   = comps.find(c => String(c.team?.id) === espnId || String(c.id) === espnId) || comps[0];
+                const them = comps.find(c => String(c.team?.id) !== espnId && String(c.id) !== espnId) || comps[1];
+                const ourScore   = getScore(us);
+                const theirScore = getScore(them);
+                const result = us?.winner ? 'W' : ourScore === theirScore ? 'D' : 'L';
+                const league = e.competitions?.[0]?.league?.shortName || e.competitions?.[0]?.league?.name || '';
+                return {
+                  result, score: `${ourScore}–${theirScore}`,
+                  opponent: them?.team?.shortDisplayName || them?.team?.displayName || them?.team?.name || '?',
+                  competition: league.replace('International Friendly', 'Friendly'),
+                  date: new Date(e.date).toLocaleDateString('en', { month: 'short', day: 'numeric', year: '2-digit' }),
+                };
+              });
+
+            upcoming = events
+              .filter(e => getStatus(e)?.state === 'pre')
+              .slice(0, 3)
+              .map(e => {
+                const comps = e.competitions?.[0]?.competitors || [];
+                const us   = comps.find(c => String(c.team?.id) === espnId || String(c.id) === espnId) || comps[0];
+                const them = comps.find(c => String(c.team?.id) !== espnId && String(c.id) !== espnId) || comps[1];
+                const d = new Date(e.date);
+                const league = e.competitions?.[0]?.league?.shortName || e.competitions?.[0]?.league?.name || '';
+                return {
+                  opponent: them?.team?.shortDisplayName || them?.team?.displayName || them?.team?.name || '?',
+                  isHome: us?.homeAway === 'home',
+                  competition: league.replace('International Friendly', 'Friendly'),
+                  date: d.toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+                  time: d.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }),
+                };
+              });
+          }
+
+          // News headlines
+          let articles = [];
+          if (newsRes.status === 'fulfilled' && newsRes.value?.articles) {
+            articles = newsRes.value.articles.slice(0, 6).map(a => ({
+              headline: a.headline || a.title || '',
+              url: a.links?.web?.href || '#',
+              date: a.published ? new Date(a.published).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : '',
+            }));
+          }
+
+          setCache(c => ({ ...c, [team.id]: { results, upcoming, articles } }));
+        } catch {}
+        setLoading(l => ({ ...l, [team.id]: false }));
+      }
+
+      function handleExpand(team) {
+        const next = expanded === team.id ? null : team.id;
+        setExpanded(next);
+        if (next) fetchTeam(team);
+      }
+
+      const filters  = ['All', 'A','B','C','D','E','F','G','H','I','J','K','L'];
+      const sorted   = [...TEAMS]
+        .filter(t => filter === 'All' || t.group === filter)
+        .sort((a, b) => (a.rank || 999) - (b.rank || 999));
+
+      const resultColor = { W: 'bg-green-900/60 text-green-300', D: 'bg-yellow-900/60 text-yellow-300', L: 'bg-red-900/60 text-red-300' };
+
+      return (
+        <div className="p-4 md:p-6 max-w-3xl mx-auto">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-xl font-black text-white">FIFA Rankings</h2>
+            <a href="https://inside.fifa.com/fifa-world-ranking/men" target="_blank" rel="noopener"
+               className="text-xs text-gray-500 hover:text-green-400 transition-colors underline">
+              Official rankings ↗
+            </a>
+          </div>
+          <p className="text-xs text-gray-600 mb-4">
+            WC 2026 teams · approximate rankings · tap a team for live results &amp; news via ESPN
+          </p>
+
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {filters.map(f => (
+              <button key={f} onClick={() => setFilter(f)}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                  filter === f ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                }`}
+              >{f === 'All' ? 'All' : `Grp ${f}`}</button>
+            ))}
+          </div>
+
+          <div className="space-y-1.5">
+            {sorted.map(team => {
+              const isExp   = expanded === team.id;
+              const data    = espnCache[team.id];
+              const isLoad  = loading[team.id];
+              const drafter = pickedByName[team.id];
+
+              return (
+                <div key={team.id} className={`bg-gray-800 border rounded-xl overflow-hidden transition-colors ${isExp ? 'border-gray-600' : 'border-gray-700'}`}>
+                  <div
+                    className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-700/40 transition-colors"
+                    onClick={() => handleExpand(team)}
+                  >
+                    <div className="w-8 text-right flex-shrink-0">
+                      <span className="text-gray-500 font-bold text-sm">#{team.rank}</span>
+                    </div>
+                    <span className="text-2xl flex-shrink-0">{team.flag}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-white text-sm leading-tight">{team.name}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        Group {team.group} · <span className={CONF_COLORS[team.conf]}>{team.conf}</span>
+                      </div>
+                    </div>
+                    {drafter && (
+                      <span className="text-xs text-green-500 font-semibold flex-shrink-0 mr-1">{drafter}</span>
+                    )}
+                    {team.espnId && (
+                      <span className="text-gray-600 text-xs flex-shrink-0">{isExp ? '▲' : '▼'}</span>
+                    )}
+                  </div>
+
+                  {isExp && (
+                    <div className="border-t border-gray-700 px-4 py-3 bg-gray-800/60">
+                      {!team.espnId ? (
+                        <p className="text-gray-600 text-xs">No ESPN data for this team.</p>
+                      ) : isLoad ? (
+                        <p className="text-gray-500 text-xs animate-pulse">Loading ESPN data…</p>
+                      ) : !data ? (
+                        <p className="text-gray-600 text-xs">No data yet.</p>
+                      ) : (
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {/* Left col: results + upcoming */}
+                          <div className="space-y-3">
+                            <div>
+                              <div className="text-xs text-gray-400 uppercase tracking-widest mb-2">Recent Results</div>
+                              {data.results.length === 0 ? (
+                                <p className="text-gray-600 text-xs">No recent results found.</p>
+                              ) : (
+                                <div className="space-y-1.5">
+                                  {data.results.map((r, i) => (
+                                    <div key={i} className="flex items-center gap-2 text-xs">
+                                      <span className={`font-black px-1.5 py-0.5 rounded text-xs flex-shrink-0 ${resultColor[r.result]}`}>{r.result}</span>
+                                      <span className="text-white font-semibold w-8 flex-shrink-0">{r.score}</span>
+                                      <span className="text-gray-300 truncate flex-1">vs {r.opponent}</span>
+                                      <span className="text-gray-600 flex-shrink-0 text-right">{r.date}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            {data.upcoming && data.upcoming.length > 0 && (
+                              <div>
+                                <div className="text-xs text-gray-400 uppercase tracking-widest mb-2">Upcoming Fixtures</div>
+                                <div className="space-y-1.5">
+                                  {data.upcoming.map((u, i) => (
+                                    <div key={i} className="flex items-center gap-2 text-xs">
+                                      <span className="text-blue-400 font-bold flex-shrink-0 w-8">{u.isHome ? 'H' : 'A'}</span>
+                                      <span className="text-gray-200 truncate flex-1">vs {u.opponent}</span>
+                                      {u.competition && <span className="text-gray-600 truncate max-w-[80px]">{u.competition}</span>}
+                                      <span className="text-gray-500 flex-shrink-0">{u.date}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Right col: news */}
+                          <div>
+                            <div className="text-xs text-gray-400 uppercase tracking-widest mb-2">Latest News</div>
+                            {data.articles.length === 0 ? (
+                              <p className="text-gray-600 text-xs">No news available.</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {data.articles.map((a, i) => (
+                                  <a key={i} href={a.url} target="_blank" rel="noopener"
+                                     className="block text-xs text-blue-400 hover:text-blue-300 transition-colors leading-snug">
+                                    {a.headline}
+                                    {a.date && <span className="text-gray-600 ml-1">· {a.date}</span>}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── TEAM DETAIL MODAL ────────────────────────────────────────────────────
+
+    function TeamDetailModal({ team, drafter, onClose }) {
+      const [data, setData]     = React.useState(null);
+      const [isLoad, setLoad]   = React.useState(false);
+      const resultColor = { W: 'bg-green-900/60 text-green-300', D: 'bg-yellow-900/60 text-yellow-300', L: 'bg-red-900/60 text-red-300' };
+
+      React.useEffect(() => {
+        if (!team.espnId) return;
+        let cancelled = false;
+        async function load() {
+          setLoad(true);
+          try {
+            const [schedRes, newsRes] = await Promise.allSettled([
+              fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/all/teams/${team.espnId}/schedule`).then(r => r.json()),
+              fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/all/news?team=${team.espnId}&limit=10`).then(r => r.json()),
+            ]);
+
+            let results = [], upcoming = [];
+            if (schedRes.status === 'fulfilled' && Array.isArray(schedRes.value?.events)) {
+              const espnId = String(team.espnId);
+              const events = schedRes.value.events;
+
+              const getScore = c => parseInt(c?.score?.displayValue ?? c?.score?.value ?? c?.score ?? 0);
+              const getStatus = e => e.competitions?.[0]?.status?.type;
+
+              const mapResult = e => {
+                const comps = e.competitions?.[0]?.competitors || [];
+                const us   = comps.find(c => String(c.team?.id) === espnId || String(c.id) === espnId) || comps[0];
+                const them = comps.find(c => String(c.team?.id) !== espnId && String(c.id) !== espnId) || comps[1];
+                const ourScore   = getScore(us);
+                const theirScore = getScore(them);
+                const result = us?.winner ? 'W' : ourScore === theirScore ? 'D' : 'L';
+                const league = e.competitions?.[0]?.league?.shortName || e.competitions?.[0]?.league?.name || '';
+                return {
+                  result, score: `${ourScore}–${theirScore}`,
+                  opponent: them?.team?.shortDisplayName || them?.team?.displayName || them?.team?.name || '?',
+                  competition: league.replace('International Friendly', 'Friendly'),
+                  date: new Date(e.date).toLocaleDateString('en', { month: 'short', day: 'numeric', year: '2-digit' }),
+                };
+              };
+
+              const mapUpcoming = e => {
+                const comps = e.competitions?.[0]?.competitors || [];
+                const us   = comps.find(c => String(c.team?.id) === espnId || String(c.id) === espnId) || comps[0];
+                const them = comps.find(c => String(c.team?.id) !== espnId && String(c.id) !== espnId) || comps[1];
+                const d = new Date(e.date);
+                const league = e.competitions?.[0]?.league?.shortName || e.competitions?.[0]?.league?.name || '';
+                return {
+                  opponent: them?.team?.shortDisplayName || them?.team?.displayName || them?.team?.name || '?',
+                  isHome: us?.homeAway === 'home',
+                  competition: league.replace('International Friendly', 'Friendly'),
+                  date: d.toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+                  time: d.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }),
+                };
+              };
+
+              results  = events.filter(e => getStatus(e)?.completed === true || getStatus(e)?.state === 'post')
+                               .slice(-8).reverse().slice(0, 5).map(mapResult);
+              upcoming = events.filter(e => getStatus(e)?.state === 'pre')
+                               .slice(0, 3).map(mapUpcoming);
+            }
+
+            let articles = [];
+            if (newsRes.status === 'fulfilled' && Array.isArray(newsRes.value?.articles)) {
+              articles = newsRes.value.articles.slice(0, 6).map(a => ({
+                headline: a.headline || a.title || '',
+                url: a.links?.web?.href || '#',
+                date: a.published ? new Date(a.published).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : '',
+              }));
+            }
+
+            if (!cancelled) setData({ results, upcoming, articles });
+          } catch(err) {
+            console.warn('TeamDetailModal fetch error:', err);
+            if (!cancelled) setData({ results: [], articles: [] });
+          } finally {
+            if (!cancelled) setLoad(false);
+          }
+        }
+        load();
+        return () => { cancelled = true; };
+      }, [team.id]);
+
+      return (
+        <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4" onClick={onClose}>
+          <div
+            className="bg-gray-800 border border-gray-700 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-700 sticky top-0 bg-gray-800 z-10">
+              <span className="text-3xl">{team.flag}</span>
+              <div className="flex-1 min-w-0">
+                <div className="font-black text-white text-base leading-tight">{team.name}</div>
+                <div className="text-xs text-gray-500">
+                  Group {team.group} · <span className={CONF_COLORS[team.conf]}>{team.conf}</span>
+                  {team.rank && <span> · #{team.rank} FIFA</span>}
+                  {drafter && <span className="text-green-500 ml-1">· {drafter}</span>}
+                </div>
+              </div>
+              <button onClick={onClose} className="text-gray-500 hover:text-white text-xl leading-none flex-shrink-0">✕</button>
+            </div>
+
+            {/* Body */}
+            <div className="px-4 py-3">
+              {!team.espnId ? (
+                <p className="text-gray-600 text-xs text-center py-6">No ESPN data available for this team.</p>
+              ) : isLoad ? (
+                <p className="text-gray-500 text-xs text-center animate-pulse py-6">Loading ESPN data…</p>
+              ) : !data ? (
+                <p className="text-gray-600 text-xs text-center py-6">No data yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {/* Recent results */}
+                  <div>
+                    <div className="text-xs text-gray-400 uppercase tracking-widest mb-2">Recent Results</div>
+                    {data.results.length === 0 ? (
+                      <p className="text-gray-600 text-xs">No recent results found.</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {data.results.map((r, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs">
+                            <span className={`font-black px-1.5 py-0.5 rounded text-xs flex-shrink-0 ${resultColor[r.result]}`}>{r.result}</span>
+                            <span className="text-white font-semibold w-8 flex-shrink-0">{r.score}</span>
+                            <span className="text-gray-300 truncate flex-1">vs {r.opponent}</span>
+                            <span className="text-gray-600 flex-shrink-0">{r.date}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Upcoming */}
+                  {data.upcoming && data.upcoming.length > 0 && (
+                    <div>
+                      <div className="text-xs text-gray-400 uppercase tracking-widest mb-2">Upcoming Fixtures</div>
+                      <div className="space-y-1.5">
+                        {data.upcoming.map((u, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs">
+                            <span className="text-blue-400 font-bold flex-shrink-0 w-8">{u.isHome ? 'H' : 'A'}</span>
+                            <span className="text-gray-200 truncate flex-1">vs {u.opponent}</span>
+                            {u.competition && <span className="text-gray-600 truncate max-w-[80px]">{u.competition}</span>}
+                            <span className="text-gray-500 flex-shrink-0">{u.date}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* News */}
+                  <div>
+                    <div className="text-xs text-gray-400 uppercase tracking-widest mb-2">Latest News</div>
+                    {data.articles.length === 0 ? (
+                      <p className="text-gray-600 text-xs">No news available.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {data.articles.map((a, i) => (
+                          <a key={i} href={a.url} target="_blank" rel="noopener"
+                             className="block text-xs text-blue-400 hover:text-blue-300 transition-colors leading-snug">
+                            {a.headline}
+                            {a.date && <span className="text-gray-600 ml-1">· {a.date}</span>}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── INVITE MODAL ─────────────────────────────────────────────────────────
+
+    function InviteModal({ url, players, onClose }) {
+      const [copied, setCopied] = React.useState(false);
+      const [msgCopied, setMsgCopied] = React.useState(false);
+
+      function buildMsg() {
+        const soccer  = String.fromCodePoint(0x26BD);
+        const point   = String.fromCodePoint(0x1F447);
+        const names = players.join(', ');
+        return `${soccer} Baja Boyz WC 2026 Challenge is live!\n\nPlayers: ${names}\n\nOpen the link to follow the draft live:\n${point}\n${url}`;
+      }
+
+      function sendToWhatsApp() {
+        const msg = buildMsg();
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+        } else {
+          navigator.clipboard.writeText(msg).then(() => {
+            setMsgCopied(true);
+            setTimeout(() => setMsgCopied(false), 3000);
+          }).catch(() => prompt('Copy and paste into WhatsApp:', msg));
+        }
+      }
+
+      function copyLink() {
+        navigator.clipboard.writeText(url).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }).catch(() => prompt('Copy this link:', url));
+      }
+
+      return (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl p-6 w-full max-w-sm border border-gray-700 shadow-2xl">
+            <div className="text-center mb-5">
+              <div className="text-4xl mb-3">🔗</div>
+              <h3 className="text-lg font-black text-white">Share with your group</h3>
+              <p className="text-gray-400 text-sm mt-1">
+                Send this link in WhatsApp. When it's someone's turn, they tap it, pick a team, and pass it on.
+              </p>
+            </div>
+
+            <div className="bg-gray-900 rounded-xl p-3 mb-4 break-all text-xs text-gray-400 border border-gray-700 select-all">
+              {url.slice(0, 60)}…
+            </div>
+
+            <button
+              onClick={sendToWhatsApp}
+              className="w-full bg-[#25D366] hover:bg-[#1ebe57] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors mb-2"
+            >
+              <span className="text-lg">📲</span>
+              {msgCopied ? '✓ Message copied — paste into WhatsApp!' : 'Send in WhatsApp'}
+            </button>
+
+            <button
+              onClick={copyLink}
+              className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2.5 rounded-xl text-sm transition-colors mb-3"
+            >
+              {copied ? '✓ Copied!' : 'Copy link'}
+            </button>
+
+            <button onClick={onClose} className="w-full text-gray-600 hover:text-gray-400 text-xs py-1 transition-colors">
+              Start drafting locally
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── PASS MODAL ───────────────────────────────────────────────────────────
+
+    function PassModal({ info, roomId, onClose }) {
+      const [msgCopied, setMsgCopied] = React.useState(false);
+
+      function sendToWhatsApp() {
+        const url = `${PAGES_URL}?room=${roomId}`;
+        const trophy  = String.fromCodePoint(0x1F3C6);
+        const soccer  = String.fromCodePoint(0x26BD);
+        const clock   = String.fromCodePoint(0x1F550);
+        const point   = String.fromCodePoint(0x1F449);
+        const flag    = info.team ? info.team.flag : '';
+        const msg = info.isDone
+          ? `${trophy} Baja Boyz WC 2026 Challenge complete! All 48 teams have been picked.\n\nView rosters & leaderboard:\n${url}`
+          : `${soccer} Baja Boyz WC 2026 Challenge — Pick ${info.pickNum}/48\n\n${info.pickerName} just picked ${flag} ${info.team.name}!\n\n${clock} ${info.nextPlayerName}, you're on the clock!\n\n${point} Open the link:\n${url}`;
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+        } else {
+          navigator.clipboard.writeText(msg).then(() => {
+            setMsgCopied(true);
+            setTimeout(() => setMsgCopied(false), 3000);
+          }).catch(() => prompt('Copy and paste into WhatsApp:', msg));
+        }
+      }
+
+      return (
+        <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl p-6 w-full max-w-xs border border-gray-700 shadow-2xl text-center">
+            <div className="text-5xl mb-3">{info.isDone ? '🏆' : info.team.flag}</div>
+            <h3 className="text-lg font-black text-white">
+              {info.isDone ? 'Draft Complete!' : `${info.pickerName} picked`}
+            </h3>
+            {!info.isDone && (
+              <div className="text-xl font-bold text-gray-200 mt-1">{info.team.name}</div>
+            )}
+
+            {!info.isDone && info.nextPlayerName && (
+              <div className="mt-4 bg-gray-700/60 rounded-xl p-3">
+                <div className="text-xs text-gray-400 uppercase tracking-widest mb-1">Up Next</div>
+                <div className="text-white font-bold text-lg">{info.nextPlayerName}</div>
+              </div>
+            )}
+
+            <button
+              onClick={sendToWhatsApp}
+              className="w-full mt-5 bg-[#25D366] hover:bg-[#1ebe57] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm"
+            >
+              <span className="text-lg">📲</span>
+              {msgCopied
+                ? '✓ Copied — paste into WhatsApp!'
+                : info.isDone ? 'Share results on WhatsApp' : 'Pass to WhatsApp group'}
+            </button>
+
+            <button
+              onClick={onClose}
+              className="w-full mt-2 text-gray-600 hover:text-gray-400 text-xs py-2 transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── APP ──────────────────────────────────────────────────────────────────
+
+    // ─── SETTINGS SCREEN ─────────────────────────────────────────────────────
+
+    function SettingsScreen({ autoFilled, scores, onBulkUpdate }) {
+      const [now, setNow] = React.useState(Date.now());
+      React.useEffect(() => {
+        const t = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(t);
+      }, []);
+
+      const [syncing, setSyncing] = React.useState(false);
+      const [syncMsg, setSyncMsg] = React.useState('');
+      async function syncFromESPN() {
+        setSyncing(true);
+        setSyncMsg('');
+        try {
+          const { newScores, updated } = await fetchESPNScores(scores || {});
+          onBulkUpdate(newScores);
+          setSyncMsg(`✓ ${updated} team${updated !== 1 ? 's' : ''} updated from ESPN`);
+        } catch (err) {
+          setSyncMsg(`Error: ${err.message}`);
+          console.error(err);
+        } finally {
+          setSyncing(false);
+        }
+      }
+
+      const deadline = DRAFT_DEADLINE.getTime();
+      const msLeft   = deadline - now;
+      const isPast   = msLeft <= 0;
+
+      function formatCountdown(ms) {
+        if (ms <= 0) return null;
+        const h = Math.floor(ms / 3600000);
+        const m = Math.floor((ms % 3600000) / 60000);
+        const s = Math.floor((ms % 60000) / 1000);
+        return `${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+      }
+
+      return (
+        <div className="p-4 max-w-lg mx-auto space-y-6">
+
+          {/* Manual score sync */}
+          <div>
+            <h2 className="text-white font-black text-lg mb-1">Scores</h2>
+            <p className="text-gray-500 text-xs mb-3">
+              Scores auto-sync from ESPN every ~2 hours. Use this to pull the latest results right now.
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={syncFromESPN}
+                disabled={syncing}
+                className="flex items-center gap-2 bg-blue-700 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-colors"
+              >
+                {syncing
+                  ? <><span className="animate-spin inline-block">⟳</span> Syncing…</>
+                  : <>⚡ Sync from ESPN</>}
+              </button>
+              {syncMsg && (
+                <span className={`text-xs ${syncMsg.startsWith('✓') ? 'text-green-400' : 'text-red-400'}`}>{syncMsg}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Auto-fill deadline */}
+          <div>
+            <h2 className="text-white font-black text-lg mb-1">Auto-fill Deadline</h2>
+            <p className="text-gray-500 text-xs mb-3">
+              Any unpicked slots will be auto-filled with the best available team by FIFA ranking the moment the first match kicks off.
+            </p>
+            <div className={`rounded-xl px-4 py-3 border ${autoFilled ? 'bg-green-900/30 border-green-700' : isPast ? 'bg-yellow-900/30 border-yellow-700' : 'bg-gray-900 border-gray-800'}`}>
+              <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Mexico kick-off · June 11</div>
+              <div className="text-white font-bold text-base">1:00 PM CST</div>
+              {autoFilled ? (
+                <div className="mt-2 text-green-400 text-xs font-semibold">✓ Auto-fill has run — all picks complete</div>
+              ) : isPast ? (
+                <div className="mt-2 text-yellow-400 text-xs font-semibold">⚡ Deadline passed — auto-fill will trigger on next app load</div>
+              ) : (
+                <div className="mt-2 text-blue-400 text-sm font-mono font-bold">{formatCountdown(msLeft)}</div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-white font-black text-lg mb-1">Draft Order</h2>
+            <p className="text-gray-500 text-xs mb-3">Snake format · 8 players · 6 rounds · 48 picks</p>
+            <div className="bg-gray-900 rounded-xl divide-y divide-gray-800">
+              {FIXED_PLAYERS.map((name, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                  <span className="text-gray-600 font-mono text-xs w-4">{i + 1}</span>
+                  <span className="text-white font-semibold flex-1">{name}</span>
+                  {i === FIXED_AI_IDX && (
+                    <span className="text-xs bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded-full">AI</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-white font-black text-lg mb-1">Share Link</h2>
+            <p className="text-gray-500 text-xs mb-3">Send this to all players — opens straight to the live draft.</p>
+            <div className="bg-gray-900 rounded-xl px-4 py-3 font-mono text-xs text-green-400 break-all">{PAGES_URL}</div>
+          </div>
+
+        </div>
+      );
+    }
+
+    // ─── INTRO PREROLL SPLASH ─────────────────────────────────────────────────
+
+    function IntroSplash({ fading }) {
+      // The 8 players' round-1 (#1) draft picks, in draft order
+      const flags = ['ESP','ENG','GER','ARG','FRA','POR','BRA','SWE']
+        .map(id => TEAM_BY_ID[id]?.flag)
+        .filter(Boolean);
+      return (
+        <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden bg-gray-950 ${fading ? 'intro-out' : ''}`}>
+          <div className="absolute inset-0 intro-bg" />
+          {/* giant spinning ball glowing behind the mark */}
+          <div className="absolute select-none opacity-[0.08]" style={{ fontSize: '40vh', lineHeight: 1 }}>
+            <span className="intro-ball inline-block">⚽️</span>
+          </div>
+
+          <div className="relative flex flex-col items-center px-6 text-center">
+            <img
+              src={LOGO_SRC}
+              alt="Baja Boyz"
+              className="w-40 sm:w-48 mb-4 intro-pop select-none"
+              style={{ filter: 'invert(1) brightness(0.95)' }}
+            />
+            <div className="baja-wordmark text-white text-2xl sm:text-3xl intro-rise" style={{ animationDelay: '0.35s' }}>
+              BAJA BOYZ
+            </div>
+            <div className="baja-sub text-green-400 text-[11px] sm:text-xs mt-1.5 intro-rise" style={{ animationDelay: '0.55s' }}>
+              N · M · N · T
+            </div>
+            <div className="text-gray-300 text-sm sm:text-base mt-3 intro-rise" style={{ animationDelay: '0.8s' }}>
+              World Cup 2026 Challenge <span className="text-green-500">🌵</span>
+            </div>
+
+            <div className="flex gap-1.5 mt-5 text-lg sm:text-xl">
+              {flags.map((f, i) => (
+                <span key={i} className="intro-flag" style={{ animationDelay: `${1 + i * 0.07}s` }}>{f}</span>
+              ))}
+            </div>
+
+            <div className="mt-7 h-1 w-40 rounded-full bg-gray-800 overflow-hidden">
+              <div className="h-full w-full intro-bar" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+
+    // ─── APP ──────────────────────────────────────────────────────────────────
+
+    function App() {
+      const [state, setState]         = useState(DEFAULT_DRAFT_STATE);
+      const [loading, setLoading]     = React.useState(true);
+      const [fbError, setFbError]     = React.useState(null);
+      const [activeTab, setActiveTab] = React.useState('leaderboard');
+      const [passModal, setPassModal] = React.useState(null);
+      const [showIntro, setShowIntro]   = React.useState(() => {
+        try { return !sessionStorage.getItem('bajaIntroSeen'); } catch { return true; }
+      });
+      const [introFading, setIntroFading] = React.useState(false);
+
+      // Preroll splash: play once per browser session (~2.6s, fade 0.6s), then reveal
+      React.useEffect(() => {
+        if (!showIntro) return;
+        try { sessionStorage.setItem('bajaIntroSeen', '1'); } catch {}
+        const fade = setTimeout(() => setIntroFading(true), 2600);
+        const done = setTimeout(() => setShowIntro(false), 3200);
+        return () => { clearTimeout(fade); clearTimeout(done); };
+      }, []);
+
+      // Connect to fixed Firebase room on mount; initialize if first run
+      useEffect(() => {
+        const ref = db.ref(`drafts/${FIXED_ROOM_ID}`);
+        // Timeout fallback in case Firebase rules block the connection
+        const timeout = setTimeout(() => {
+          setFbError('Could not connect to Firebase. Check that Realtime Database rules allow read/write access.');
+          setLoading(false);
+        }, 8000);
+        ref.on('value', snap => {
+          clearTimeout(timeout);
+          const data = snap.val();
+          if (data) {
+            // Firebase strips trailing nulls from arrays AND converts sparse arrays to objects.
+            // Always rebuild the full 48-slot array regardless of what shape comes back.
+            const normalizePicks = (raw) => {
+              const arr = Array(48).fill(null);
+              if (!raw) return arr;
+              if (Array.isArray(raw)) {
+                raw.forEach((v, i) => { if (i < 48) arr[i] = v || null; });
+              } else {
+                Object.entries(raw).forEach(([k, v]) => { arr[parseInt(k)] = v || null; });
+              }
+              return arr;
+            };
+            setState({ ...DEFAULT_DRAFT_STATE, ...data, picks: normalizePicks(data.picks) });
+          } else {
+            // A null snapshot is far more likely a transient read/rules issue than a
+            // genuine first run. Never auto-write DEFAULT here — doing so would wipe an
+            // existing draft and let auto-fill repopulate it by ranking. Show default
+            // locally only; the real data reloads on the next successful read.
+            setState(DEFAULT_DRAFT_STATE);
+          }
+          setLoading(false);
+          setFbError(null);
+        }, err => {
+          clearTimeout(timeout);
+          setFbError(`Firebase error: ${err.message}. Go to Firebase Console → Realtime Database → Rules and set both .read and .write to true.`);
+          setLoading(false);
+        });
+        return () => { ref.off(); clearTimeout(timeout); };
+      }, []);
+
+      function writeState(newState) {
+        setState(newState);
+        db.ref(`drafts/${FIXED_ROOM_ID}`).set(newState);
+      }
+
+      // Keep a ref to latest state so deadline timer always reads fresh data
+      const stateRef = React.useRef(state);
+      React.useEffect(() => { stateRef.current = state; }, [state]);
+
+      // Background auto-sync: pull ESPN scores every 5 min while the app is open.
+      // Covers GitHub Actions cron delays/drops so scores stay current without a
+      // manual click. Writes only the scores node — never touches picks.
+      React.useEffect(() => {
+        if (loading) return;
+        let stopped = false;
+        async function tick() {
+          try {
+            const { newScores } = await fetchESPNScores(stateRef.current.scores || {});
+            if (!stopped) db.ref(`drafts/${FIXED_ROOM_ID}/scores`).set(newScores);
+          } catch (e) { /* transient network/ESPN error — retry next tick */ }
+        }
+        const first = setTimeout(tick, 15000);           // shortly after load
+        const iv    = setInterval(tick, 5 * 60 * 1000);  // every 5 minutes
+        return () => { stopped = true; clearTimeout(first); clearInterval(iv); };
+      }, [loading]);
+
+      function performAutoFill(s) {
+        if (s.autoFilled) return;
+        const picks = [...s.picks];
+        if (!picks.some(p => p === null)) return;
+        const pickedSet = new Set(picks.filter(Boolean));
+        const remaining = [...TEAMS]
+          .filter(t => !pickedSet.has(t.id))
+          .sort((a, b) => (a.rank || 999) - (b.rank || 999));
+        let ri = 0;
+        for (let i = 0; i < 48; i++) {
+          if (picks[i] === null && ri < remaining.length) {
+            picks[i] = remaining[ri++].id;
+          }
+        }
+        writeState({ ...s, picks, autoFilled: true });
+      }
+
+      // If app is already open when deadline hits, fire auto-fill at that exact moment
+      React.useEffect(() => {
+        if (loading) return;
+        const delay = DRAFT_DEADLINE.getTime() - Date.now();
+        if (delay <= 0) return; // Already past — handled by the state-based effect below
+        const timer = setTimeout(() => performAutoFill(stateRef.current), delay);
+        return () => clearTimeout(timer);
+      }, [loading]);
+
+      // If app is opened after the deadline has already passed, auto-fill on load
+      React.useEffect(() => {
+        if (loading || state.autoFilled) return;
+        if (Date.now() < DRAFT_DEADLINE.getTime()) return;
+        if (!state.picks.some(p => p === null)) return;
+        performAutoFill(state);
+      }, [state.picks, state.autoFilled, loading]);
+
+      // Claudinho AI auto-pick
+      useEffect(() => {
+        if (state.phase !== 'draft' || state.aiPlayerIdx === null) return;
+        const currentPickIdx = state.picks.findIndex(p => p === null);
+        if (currentPickIdx === -1) return;
+        if (pickToPlayer(currentPickIdx, state.draftOrder) !== state.aiPlayerIdx) return;
+        const timer = setTimeout(() => {
+          const pickedSet = new Set(state.picks.filter(Boolean));
+          const available = TEAMS.filter(t => !pickedSet.has(t.id));
+          if (!available.length) return;
+          const sorted = [...available].sort((a, b) => (TEAM_RATINGS[b.id] || 50) - (TEAM_RATINGS[a.id] || 50));
+          const pool = sorted.slice(0, Math.min(3, sorted.length));
+          const pick = pool[Math.floor(Math.random() * pool.length)];
+          const idx = state.picks.findIndex(p => p === null);
+          if (idx === -1) return;
+          const picks = [...state.picks]; picks[idx] = pick.id;
+          writeState({ ...state, picks });
+        }, 1800);
+        return () => clearTimeout(timer);
+      }, [state.picks, state.phase, state.aiPlayerIdx, state.draftOrder]);
+
+      function handlePick(teamId) {
+        const idx = state.picks.findIndex(p => p === null);
+        if (idx === -1) return;
+        const picks = [...state.picks];
+        picks[idx] = teamId;
+        writeState({ ...state, picks });
+        const pickerIdx = pickToPlayer(idx, state.draftOrder);
+        if (pickerIdx !== state.aiPlayerIdx) {
+          const team = TEAM_BY_ID[teamId];
+          const nextPickIdx = idx + 1;
+          const isDone = nextPickIdx >= 48;
+          const nextPlayerIdx = isDone ? null : pickToPlayer(nextPickIdx, state.draftOrder);
+          setPassModal({
+            pickerName: state.players[pickerIdx],
+            team,
+            nextPlayerName: isDone ? null : state.players[nextPlayerIdx],
+            isDone,
+            pickNum: idx + 1,
+          });
+        }
+      }
+
+      function handleUndo() {
+        const lastIdx = [...state.picks].map((p, i) => p ? i : -1).filter(i => i >= 0).slice(-1)[0];
+        if (lastIdx === undefined || lastIdx < 0) return;
+        const picks = [...state.picks];
+        picks[lastIdx] = null;
+        writeState({ ...state, picks });
+      }
+
+      function handleUpdateScore(teamId, data) {
+        writeState({ ...state, scores: { ...state.scores, [teamId]: data } });
+      }
+
+      function handleBulkUpdateScores(newScores) {
+        writeState({ ...state, scores: newScores });
+      }
+
+      function handleShare() {
+        navigator.clipboard.writeText(PAGES_URL)
+          .then(() => alert('Link copied! Send it to the WhatsApp group.'))
+          .catch(() => prompt('Copy this link:', PAGES_URL));
+      }
+
+      function handleReset() {
+        if (confirm('Reset the entire draft and all scores? This cannot be undone.')) {
+          writeState(DEFAULT_DRAFT_STATE);
+        }
+      }
+
+      // Preroll intro plays first; if Firebase is still loading when it ends,
+      // the connecting screen below takes over seamlessly.
+      if (showIntro) {
+        return <IntroSplash fading={introFading} />;
+      }
+
+      if (loading) {
+        return (
+          <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4">
+            <img src={LOGO_SRC} alt="Baja Boyz" className="w-24 opacity-60 select-none" style={{filter:'invert(1) brightness(0.7)'}} />
+            <div className="text-green-600 text-xs tracking-widest animate-pulse">CONNECTING…</div>
+          </div>
+        );
+      }
+
+      if (fbError) {
+        return (
+          <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4 p-6">
+            <img src={LOGO_SRC} alt="Baja Boyz" className="w-24 opacity-40 select-none" style={{filter:'invert(1) brightness(0.7)'}} />
+            <div className="text-red-400 text-sm font-bold text-center">Connection Failed</div>
+            <div className="text-gray-500 text-xs text-center max-w-xs">{fbError}</div>
+            <button onClick={() => window.location.reload()} className="mt-2 text-xs bg-gray-800 text-gray-300 px-4 py-2 rounded-lg">Retry</button>
+          </div>
+        );
+      }
+
+      const tabs = [
+        { id: 'leaderboard', emoji: '🏆', label: 'Ldrboard' },
+        { id: 'groups',      emoji: '🗓', label: 'Groups' },
+        { id: 'fixtures',    emoji: '⚽️', label: 'Fixtures' },
+        { id: 'rosters',     emoji: '👥', label: 'Rosters' },
+        { id: 'gallery',     emoji: '📸', label: 'Gallery' },
+        { id: 'rankings',    emoji: '🌍', label: 'Rankings' },
+        { id: 'settings',    emoji: '⚙️',  label: 'Settings' },
+      ];
+
+      const draftProgress = state.picks.filter(p => p !== null).length;
+
+      return (
+        <div className="min-h-screen flex flex-col">
+          <header className="bg-gray-900 border-b border-gray-800 sticky top-0 z-40">
+            <div className="flex items-center justify-between px-4 py-2.5">
+              <div className="flex items-center gap-2.5">
+                <img src={LOGO_SRC} alt="Baja Boyz" className="h-9 select-none" style={{filter:'invert(1) brightness(0.85)'}} />
+                <div>
+                  <div className="baja-since text-gray-500" style={{fontSize:'9px',letterSpacing:'0.25em'}}>
+                    WC 2026 · {draftProgress}/48 picks
+                    {draftProgress > 0 && draftProgress < 48 && (
+                      <span> · {state.players[pickToPlayer(draftProgress, state.draftOrder)]} on clock</span>
+                    )}
+                  </div>
+                  <div style={{fontSize:'8px',letterSpacing:'0.15em'}} className="text-green-600 font-mono">
+                    ● LIVE
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handleShare}
+                className="text-xs bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg transition-colors font-medium"
+              >
+                Share
+              </button>
+            </div>
+
+            <nav className="flex">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 py-2 flex flex-col items-center gap-0.5 font-semibold transition-colors border-b-2 ${
+                    activeTab === tab.id
+                      ? 'text-green-400 border-green-400'
+                      : 'text-gray-500 border-transparent hover:text-gray-300'
+                  }`}
+                >
+                  <span className="text-base leading-none">{tab.emoji}</span>
+                  <span style={{fontSize:'9px'}}>{tab.label}</span>
+                </button>
+              ))}
+            </nav>
+          </header>
+
+          {passModal && <PassModal info={passModal} roomId={FIXED_ROOM_ID} onClose={() => setPassModal(null)} />}
+
+          <main className="flex-1 overflow-auto">
+            {activeTab === 'draft'       && <DraftScreen       state={state} onPick={handlePick} onUndo={handleUndo} onShare={setPassModal} />}
+            {activeTab === 'fixtures'    && <FixturesScreen    state={state} />}
+            {activeTab === 'rosters'     && <RostersScreen     state={state} />}
+            {activeTab === 'groups'      && <GroupsScreen      state={state} />}
+            {activeTab === 'rankings'    && <RankingsScreen    state={state} />}
+            {activeTab === 'gallery'     && <GalleryScreen     />}
+            {activeTab === 'scoring'     && <ScoringScreen     state={state} onUpdateScore={handleUpdateScore} onBulkUpdate={handleBulkUpdateScores} />}
+            {activeTab === 'leaderboard' && <LeaderboardScreen state={state} />}
+            {activeTab === 'settings'    && <SettingsScreen    autoFilled={!!state.autoFilled} scores={state.scores} onBulkUpdate={handleBulkUpdateScores} />}
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
