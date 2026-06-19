@@ -894,10 +894,12 @@ function FixturesScreen({ state }) {
   }
   React.useEffect(() => {
     let cancelled = false;
-    (async () => {
-      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q;
-      setLoading(true);
-      setError("");
+    const load = async (initial) => {
+      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s;
+      if (initial) {
+        setLoading(true);
+        setError("");
+      }
       try {
         const dates = [];
         const start = /* @__PURE__ */ new Date();
@@ -928,28 +930,38 @@ function FixturesScreen({ state }) {
               round: ((_i = e.seasonType) == null ? void 0 : _i.name) || "",
               home,
               away,
-              homeScore: (_l = (_j = home == null ? void 0 : home.score) == null ? void 0 : _j.displayValue) != null ? _l : (_k = home == null ? void 0 : home.score) == null ? void 0 : _k.value,
-              awayScore: (_o = (_m = away == null ? void 0 : away.score) == null ? void 0 : _m.displayValue) != null ? _o : (_n = away == null ? void 0 : away.score) == null ? void 0 : _n.value,
+              homeScore: (_m = (_l = (_j = home == null ? void 0 : home.score) == null ? void 0 : _j.displayValue) != null ? _l : (_k = home == null ? void 0 : home.score) == null ? void 0 : _k.value) != null ? _m : home == null ? void 0 : home.score,
+              awayScore: (_q = (_p = (_n = away == null ? void 0 : away.score) == null ? void 0 : _n.displayValue) != null ? _p : (_o = away == null ? void 0 : away.score) == null ? void 0 : _o.value) != null ? _q : away == null ? void 0 : away.score,
               venueName: venue.fullName || "",
-              city: ((_p = venue.address) == null ? void 0 : _p.city) || "",
-              country: ((_q = venue.address) == null ? void 0 : _q.country) || ""
+              city: ((_r = venue.address) == null ? void 0 : _r.city) || "",
+              country: ((_s = venue.address) == null ? void 0 : _s.country) || ""
             });
           }
         }
         const seen = /* @__PURE__ */ new Set();
         const deduped = events.filter((e) => seen.has(e.id) ? false : seen.add(e.id));
         deduped.sort((a, b) => a.date - b.date);
-        if (!cancelled) setFixtures(deduped);
+        if (!cancelled) {
+          setFixtures(deduped);
+          setError("");
+        }
       } catch (err) {
-        if (!cancelled) setError(err.message || "Failed to load fixtures");
+        if (!cancelled && initial) setError(err.message || "Failed to load fixtures");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && initial) setLoading(false);
       }
-    })();
+    };
+    load(true);
+    const iv = setInterval(() => load(false), 6e4);
     return () => {
       cancelled = true;
+      clearInterval(iv);
     };
   }, []);
+  const venueKey = React.useMemo(
+    () => fixtures ? [...new Set(fixtures.map((f) => f.venueName).filter(Boolean))].sort().join("|") : "",
+    [fixtures]
+  );
   React.useEffect(() => {
     if (!fixtures || fixtures.length === 0) return;
     let cancelled = false;
@@ -980,7 +992,7 @@ function FixturesScreen({ state }) {
     return () => {
       cancelled = true;
     };
-  }, [fixtures]);
+  }, [venueKey]);
   function fixtureWeather(f) {
     const w = weather[f.venueName];
     if (!w) return null;

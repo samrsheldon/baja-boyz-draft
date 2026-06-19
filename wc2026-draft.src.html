@@ -1189,8 +1189,8 @@
 
       React.useEffect(() => {
         let cancelled = false;
-        (async () => {
-          setLoading(true); setError('');
+        const load = async (initial) => {
+          if (initial) { setLoading(true); setError(''); }
           try {
             // Build a rolling 16-day window of dates from today (YYYYMMDD)
             const dates = [];
@@ -1223,8 +1223,8 @@
                   detail: st?.shortDetail,
                   round: e.seasonType?.name || '',
                   home, away,
-                  homeScore: home?.score?.displayValue ?? home?.score?.value,
-                  awayScore: away?.score?.displayValue ?? away?.score?.value,
+                  homeScore: home?.score?.displayValue ?? home?.score?.value ?? home?.score,
+                  awayScore: away?.score?.displayValue ?? away?.score?.value ?? away?.score,
                   venueName: venue.fullName || '',
                   city: venue.address?.city || '',
                   country: venue.address?.country || '',
@@ -1235,15 +1235,25 @@
             const seen = new Set();
             const deduped = events.filter(e => (seen.has(e.id) ? false : seen.add(e.id)));
             deduped.sort((a, b) => a.date - b.date);
-            if (!cancelled) setFixtures(deduped);
+            if (!cancelled) { setFixtures(deduped); setError(''); }
           } catch (err) {
-            if (!cancelled) setError(err.message || 'Failed to load fixtures');
+            if (!cancelled && initial) setError(err.message || 'Failed to load fixtures');
           } finally {
-            if (!cancelled) setLoading(false);
+            if (!cancelled && initial) setLoading(false);
           }
-        })();
-        return () => { cancelled = true; };
+        };
+        load(true);
+        // Refresh every 60s so live match scores update while the tab is open
+        const iv = setInterval(() => load(false), 60000);
+        return () => { cancelled = true; clearInterval(iv); };
       }, []);
+
+      // Stable key of the unique venues in play — so the weather effect only
+      // re-fetches when the venue set changes, not on every 60s live refresh.
+      const venueKey = React.useMemo(
+        () => fixtures ? [...new Set(fixtures.map(f => f.venueName).filter(Boolean))].sort().join('|') : '',
+        [fixtures]
+      );
 
       // Fetch day-of-match forecasts (Open-Meteo, free/no-key) once fixtures load.
       // One request per unique venue covers all of that venue's fixtures.
@@ -1275,7 +1285,7 @@
           setWeather(next);
         })();
         return () => { cancelled = true; };
-      }, [fixtures]);
+      }, [venueKey]);
 
       // Look up a fixture's forecast for its venue-local match day
       function fixtureWeather(f) {
