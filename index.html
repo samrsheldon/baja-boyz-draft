@@ -1700,11 +1700,12 @@ function App() {
           return arr;
         };
         setState(__spreadProps(__spreadValues(__spreadValues({}, DEFAULT_DRAFT_STATE), data), { picks: normalizePicks(data.picks) }));
+        setLoading(false);
+        setFbError(null);
       } else {
-        setState(DEFAULT_DRAFT_STATE);
+        setFbError("Reconnecting to draft data\u2026");
+        setLoading(false);
       }
-      setLoading(false);
-      setFbError(null);
     }, (err) => {
       clearTimeout(timeout);
       setFbError(`Firebase error: ${err.message}. Go to Firebase Console \u2192 Realtime Database \u2192 Rules and set both .read and .write to true.`);
@@ -1716,6 +1717,10 @@ function App() {
     };
   }, []);
   function writeState(newState) {
+    if (!newState || !Array.isArray(newState.picks) || !newState.picks.some(Boolean)) {
+      console.warn("writeState blocked: refusing to persist empty/invalid picks");
+      return;
+    }
     setState(newState);
     db.ref(`drafts/${FIXED_ROOM_ID}`).set(newState);
   }
@@ -1741,33 +1746,6 @@ function App() {
       clearInterval(iv);
     };
   }, [loading]);
-  function performAutoFill(s) {
-    if (s.autoFilled) return;
-    const picks = [...s.picks];
-    if (!picks.some((p) => p === null)) return;
-    const pickedSet = new Set(picks.filter(Boolean));
-    const remaining = [...TEAMS].filter((t) => !pickedSet.has(t.id)).sort((a, b) => (a.rank || 999) - (b.rank || 999));
-    let ri = 0;
-    for (let i = 0; i < 48; i++) {
-      if (picks[i] === null && ri < remaining.length) {
-        picks[i] = remaining[ri++].id;
-      }
-    }
-    writeState(__spreadProps(__spreadValues({}, s), { picks, autoFilled: true }));
-  }
-  React.useEffect(() => {
-    if (loading) return;
-    const delay = DRAFT_DEADLINE.getTime() - Date.now();
-    if (delay <= 0) return;
-    const timer = setTimeout(() => performAutoFill(stateRef.current), delay);
-    return () => clearTimeout(timer);
-  }, [loading]);
-  React.useEffect(() => {
-    if (loading || state.autoFilled) return;
-    if (Date.now() < DRAFT_DEADLINE.getTime()) return;
-    if (!state.picks.some((p) => p === null)) return;
-    performAutoFill(state);
-  }, [state.picks, state.autoFilled, loading]);
   useEffect(() => {
     if (state.phase !== "draft" || state.aiPlayerIdx === null) return;
     const currentPickIdx = state.picks.findIndex((p) => p === null);

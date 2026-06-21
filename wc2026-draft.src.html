@@ -2392,15 +2392,17 @@
               return arr;
             };
             setState({ ...DEFAULT_DRAFT_STATE, ...data, picks: normalizePicks(data.picks) });
+            setLoading(false);
+            setFbError(null);
           } else {
-            // A null snapshot is far more likely a transient read/rules issue than a
-            // genuine first run. Never auto-write DEFAULT here — doing so would wipe an
-            // existing draft and let auto-fill repopulate it by ranking. Show default
-            // locally only; the real data reloads on the next successful read.
-            setState(DEFAULT_DRAFT_STATE);
+            // Null/empty snapshot — almost always a transient read/rules hiccup, NOT a
+            // real first run (the room always has data). Critically, do NOT load defaults
+            // into state: empty state could let a write (or any effect) overwrite the real
+            // draft with blank/rank-ordered picks. Keep what we have and wait for the next
+            // good snapshot.
+            setFbError('Reconnecting to draft data…');
+            setLoading(false);
           }
-          setLoading(false);
-          setFbError(null);
         }, err => {
           clearTimeout(timeout);
           setFbError(`Firebase error: ${err.message}. Go to Firebase Console → Realtime Database → Rules and set both .read and .write to true.`);
@@ -2410,6 +2412,13 @@
       }, []);
 
       function writeState(newState) {
+        // Guard: never persist a blank/empty draft. The draft is complete, so a valid
+        // state always has 48 picks with at least one team assigned. This blocks any
+        // path that might try to write default/empty data over the real draft.
+        if (!newState || !Array.isArray(newState.picks) || !newState.picks.some(Boolean)) {
+          console.warn('writeState blocked: refusing to persist empty/invalid picks');
+          return;
+        }
         setState(newState);
         db.ref(`drafts/${FIXED_ROOM_ID}`).set(newState);
       }
@@ -2435,39 +2444,11 @@
         return () => { stopped = true; clearTimeout(first); clearInterval(iv); };
       }, [loading]);
 
-      function performAutoFill(s) {
-        if (s.autoFilled) return;
-        const picks = [...s.picks];
-        if (!picks.some(p => p === null)) return;
-        const pickedSet = new Set(picks.filter(Boolean));
-        const remaining = [...TEAMS]
-          .filter(t => !pickedSet.has(t.id))
-          .sort((a, b) => (a.rank || 999) - (b.rank || 999));
-        let ri = 0;
-        for (let i = 0; i < 48; i++) {
-          if (picks[i] === null && ri < remaining.length) {
-            picks[i] = remaining[ri++].id;
-          }
-        }
-        writeState({ ...s, picks, autoFilled: true });
-      }
-
-      // If app is already open when deadline hits, fire auto-fill at that exact moment
-      React.useEffect(() => {
-        if (loading) return;
-        const delay = DRAFT_DEADLINE.getTime() - Date.now();
-        if (delay <= 0) return; // Already past — handled by the state-based effect below
-        const timer = setTimeout(() => performAutoFill(stateRef.current), delay);
-        return () => clearTimeout(timer);
-      }, [loading]);
-
-      // If app is opened after the deadline has already passed, auto-fill on load
-      React.useEffect(() => {
-        if (loading || state.autoFilled) return;
-        if (Date.now() < DRAFT_DEADLINE.getTime()) return;
-        if (!state.picks.some(p => p === null)) return;
-        performAutoFill(state);
-      }, [state.picks, state.autoFilled, loading]);
+      // NOTE: Draft-deadline auto-fill has been removed. It was only needed to fill
+      // unpicked slots when the draft was live; the draft is long complete. Worse, it
+      // was a corruption hazard — a transient null read could reset local state to
+      // defaults (nulled picks), and auto-fill would then overwrite Firebase with
+      // rank-ordered picks. With it gone, picks can no longer be auto-rewritten.
 
       // Claudinho AI auto-pick
       useEffect(() => {
