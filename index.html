@@ -219,6 +219,23 @@ const ROUND_ORDER = {
   "Runner-up": 6,
   "Champion": 7
 };
+const ESPN_SLUG_TO_KO_ROUND = {
+  "round-of-32": "Round of 32",
+  "round-of-16": "Round of 16",
+  "quarterfinals": "Quarterfinal",
+  "semifinals": "Semifinal",
+  "third-place": "3rd Place",
+  "final": "Final"
+};
+const KO_ROUNDS = ["Round of 32", "Round of 16", "Quarterfinal", "Semifinal", "3rd Place", "Final"];
+const KO_ROUND_SHORT = {
+  "Round of 32": "R32",
+  "Round of 16": "R16",
+  "Quarterfinal": "QF",
+  "Semifinal": "SF",
+  "3rd Place": "3rd",
+  "Final": "Final"
+};
 const CONF_COLORS = {
   UEFA: "text-blue-400",
   CONMEBOL: "text-emerald-400",
@@ -720,6 +737,119 @@ function wmoWeather(code) {
   if (code === 85 || code === 86) return { emoji: "\u{1F328}\uFE0F", label: "Snow showers" };
   if (code >= 95) return { emoji: "\u26C8\uFE0F", label: "Thunderstorm" };
   return { emoji: "\u{1F321}\uFE0F", label: "" };
+}
+function KnockoutScreen({ state }) {
+  const { players, draftOrder, picks } = state;
+  const [matches, setMatches] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState("");
+  const [round, setRound] = React.useState(null);
+  const ownerByTeamId = React.useMemo(() => {
+    const m = {};
+    picks.forEach((teamId, idx) => {
+      if (teamId) m[teamId] = players[pickToPlayer(idx, draftOrder)];
+    });
+    return m;
+  }, [picks, draftOrder, players]);
+  React.useEffect(() => {
+    let cancelled = false;
+    const load = async (initial) => {
+      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
+      if (initial) {
+        setLoading(true);
+        setError("");
+      }
+      try {
+        const dates = [];
+        const start = Date.UTC(2026, 5, 28);
+        for (let i = 0; i < 22; i++) {
+          const d = new Date(start + i * 864e5);
+          dates.push(`${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`);
+        }
+        const res = await Promise.allSettled(dates.map(
+          (dt) => fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${dt}`).then((r) => r.json())
+        ));
+        const evs = [];
+        const seen = /* @__PURE__ */ new Set();
+        for (const r of res) {
+          if (r.status !== "fulfilled") continue;
+          for (const e of ((_a = r.value) == null ? void 0 : _a.events) || []) {
+            const ko = ESPN_SLUG_TO_KO_ROUND[(_b = e.season) == null ? void 0 : _b.slug];
+            if (!ko || seen.has(e.id)) continue;
+            seen.add(e.id);
+            const comps = ((_d = (_c = e.competitions) == null ? void 0 : _c[0]) == null ? void 0 : _d.competitors) || [];
+            const home = comps.find((c) => c.homeAway === "home") || comps[0];
+            const away = comps.find((c) => c.homeAway === "away") || comps[1];
+            const st = (_g = (_f = (_e = e.competitions) == null ? void 0 : _e[0]) == null ? void 0 : _f.status) == null ? void 0 : _g.type;
+            evs.push({
+              id: e.id,
+              round: ko,
+              date: new Date(e.date),
+              state: st == null ? void 0 : st.state,
+              detail: st == null ? void 0 : st.shortDetail,
+              home,
+              away,
+              homeScore: (_k = (_j = (_h = home == null ? void 0 : home.score) == null ? void 0 : _h.displayValue) != null ? _j : (_i = home == null ? void 0 : home.score) == null ? void 0 : _i.value) != null ? _k : home == null ? void 0 : home.score,
+              awayScore: (_o = (_n = (_l = away == null ? void 0 : away.score) == null ? void 0 : _l.displayValue) != null ? _n : (_m = away == null ? void 0 : away.score) == null ? void 0 : _m.value) != null ? _o : away == null ? void 0 : away.score
+            });
+          }
+        }
+        evs.sort((a, b) => a.date - b.date);
+        if (!cancelled) {
+          setMatches(evs);
+          setError("");
+        }
+      } catch (err) {
+        if (!cancelled && initial) setError(err.message || "Failed to load bracket");
+      } finally {
+        if (!cancelled && initial) setLoading(false);
+      }
+    };
+    load(true);
+    const iv = setInterval(() => load(false), 6e4);
+    return () => {
+      cancelled = true;
+      clearInterval(iv);
+    };
+  }, []);
+  const byRound = React.useMemo(() => {
+    const m = {};
+    (matches || []).forEach((x) => {
+      (m[x.round] = m[x.round] || []).push(x);
+    });
+    return m;
+  }, [matches]);
+  const availableRounds = KO_ROUNDS.filter((r) => {
+    var _a;
+    return (_a = byRound[r]) == null ? void 0 : _a.length;
+  });
+  const activeRound = round && availableRounds.includes(round) ? round : availableRounds[0];
+  function side(comp, score, won) {
+    var _a, _b, _c, _d;
+    const id = String((_b = (_a = comp == null ? void 0 : comp.team) == null ? void 0 : _a.id) != null ? _b : "");
+    const team = TEAM_BY_ESPN[id];
+    const flag = (team == null ? void 0 : team.flag) || "\u2B1C\uFE0F";
+    const name = (team == null ? void 0 : team.name) || ((_c = comp == null ? void 0 : comp.team) == null ? void 0 : _c.shortDisplayName) || ((_d = comp == null ? void 0 : comp.team) == null ? void 0 : _d.displayName) || "TBD";
+    const owner = team ? ownerByTeamId[team.id] : null;
+    const placeholder = !team;
+    return /* @__PURE__ */ React.createElement("div", { className: `flex items-center gap-2 px-3 py-2 ${won ? "bg-green-900/20" : ""}` }, /* @__PURE__ */ React.createElement("span", { className: "text-lg flex-shrink-0" }, flag), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: `text-sm truncate ${placeholder ? "text-gray-500 italic" : won ? "font-bold text-white" : "text-gray-200"}` }, name), owner && /* @__PURE__ */ React.createElement("div", { className: "text-[11px] text-green-400 truncate" }, owner)), won && /* @__PURE__ */ React.createElement("span", { className: "text-green-400 text-xs flex-shrink-0" }, "\u2713"), score != null && score !== "" && /* @__PURE__ */ React.createElement("span", { className: `text-base font-black flex-shrink-0 w-5 text-right ${won ? "text-white" : "text-gray-400"}` }, score));
+  }
+  return /* @__PURE__ */ React.createElement("div", { className: "p-4 md:p-6 max-w-2xl mx-auto" }, /* @__PURE__ */ React.createElement("h2", { className: "text-xl font-black text-white mb-1" }, "Knockout Bracket"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500 mb-4" }, "Live from ESPN \xB7 teams & owners fill in as the groups finish \xB7 knockouts begin June 28"), loading && /* @__PURE__ */ React.createElement("p", { className: "text-gray-500 text-sm" }, "Loading bracket\u2026"), error && /* @__PURE__ */ React.createElement("p", { className: "text-red-400 text-sm" }, "Error: ", error), !loading && !error && availableRounds.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "text-gray-500 text-sm" }, "Bracket not published yet \u2014 check back closer to June 28."), availableRounds.length > 0 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-1.5 mb-4" }, availableRounds.map((r) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: r,
+      onClick: () => setRound(r),
+      className: `px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${r === activeRound ? "bg-green-600 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700"}`
+    },
+    KO_ROUND_SHORT[r]
+  ))), /* @__PURE__ */ React.createElement("div", { className: "space-y-3" }, (byRound[activeRound] || []).map((m) => {
+    var _a, _b;
+    const live = m.state === "in";
+    const done = m.state === "post" || m.detail === "FT";
+    const aWon = done && ((_a = m.away) == null ? void 0 : _a.winner);
+    const hWon = done && ((_b = m.home) == null ? void 0 : _b.winner);
+    return /* @__PURE__ */ React.createElement("div", { key: m.id, className: "bg-gray-800 border border-gray-700 rounded-xl overflow-hidden" }, side(m.away, m.awayScore, aWon), /* @__PURE__ */ React.createElement("div", { className: "border-t border-gray-700/60" }), side(m.home, m.homeScore, hWon), /* @__PURE__ */ React.createElement("div", { className: "px-3 py-1.5 bg-gray-900/50 border-t border-gray-700/60 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("span", { className: "text-[10px] text-gray-500" }, m.date.toLocaleDateString("en", { month: "short", day: "numeric" }), " \xB7 ", m.date.toLocaleTimeString("en", { hour: "numeric", minute: "2-digit" })), live ? /* @__PURE__ */ React.createElement("span", { className: "text-[10px] font-bold text-red-400 animate-pulse" }, "\u25CF ", m.detail || "LIVE") : /* @__PURE__ */ React.createElement("span", { className: "text-[10px] text-gray-600" }, done ? "Full Time" : "Scheduled")));
+  }))));
 }
 function FixturesScreen({ state }) {
   const { players, draftOrder, picks } = state;
@@ -1821,6 +1951,7 @@ function App() {
     { id: "leaderboard", emoji: "\u{1F3C6}", label: "Ldrboard" },
     { id: "groups", emoji: "\u{1F5D3}", label: "Groups" },
     { id: "fixtures", emoji: "\u26BD\uFE0F", label: "Fixtures" },
+    { id: "bracket", emoji: "\u{1F94A}", label: "Bracket" },
     { id: "rosters", emoji: "\u{1F465}", label: "Rosters" },
     { id: "gallery", emoji: "\u{1F4F8}", label: "Gallery" },
     { id: "rankings", emoji: "\u{1F30D}", label: "Rankings" },
@@ -1843,7 +1974,7 @@ function App() {
     },
     /* @__PURE__ */ React.createElement("span", { className: "text-base leading-none" }, tab.emoji),
     /* @__PURE__ */ React.createElement("span", { style: { fontSize: "9px" } }, tab.label)
-  )))), passModal && /* @__PURE__ */ React.createElement(PassModal, { info: passModal, roomId: FIXED_ROOM_ID, onClose: () => setPassModal(null) }), /* @__PURE__ */ React.createElement("main", { className: "flex-1 overflow-auto" }, activeTab === "draft" && /* @__PURE__ */ React.createElement(DraftScreen, { state, onPick: handlePick, onUndo: handleUndo, onShare: setPassModal }), activeTab === "fixtures" && /* @__PURE__ */ React.createElement(FixturesScreen, { state }), activeTab === "rosters" && /* @__PURE__ */ React.createElement(RostersScreen, { state }), activeTab === "groups" && /* @__PURE__ */ React.createElement(GroupsScreen, { state }), activeTab === "rankings" && /* @__PURE__ */ React.createElement(RankingsScreen, { state }), activeTab === "gallery" && /* @__PURE__ */ React.createElement(GalleryScreen, null), activeTab === "scoring" && /* @__PURE__ */ React.createElement(ScoringScreen, { state, onUpdateScore: handleUpdateScore, onBulkUpdate: handleBulkUpdateScores }), activeTab === "leaderboard" && /* @__PURE__ */ React.createElement(LeaderboardScreen, { state }), activeTab === "settings" && /* @__PURE__ */ React.createElement(SettingsScreen, { autoFilled: !!state.autoFilled, scores: state.scores, onBulkUpdate: handleBulkUpdateScores })));
+  )))), passModal && /* @__PURE__ */ React.createElement(PassModal, { info: passModal, roomId: FIXED_ROOM_ID, onClose: () => setPassModal(null) }), /* @__PURE__ */ React.createElement("main", { className: "flex-1 overflow-auto" }, activeTab === "draft" && /* @__PURE__ */ React.createElement(DraftScreen, { state, onPick: handlePick, onUndo: handleUndo, onShare: setPassModal }), activeTab === "fixtures" && /* @__PURE__ */ React.createElement(FixturesScreen, { state }), activeTab === "bracket" && /* @__PURE__ */ React.createElement(KnockoutScreen, { state }), activeTab === "rosters" && /* @__PURE__ */ React.createElement(RostersScreen, { state }), activeTab === "groups" && /* @__PURE__ */ React.createElement(GroupsScreen, { state }), activeTab === "rankings" && /* @__PURE__ */ React.createElement(RankingsScreen, { state }), activeTab === "gallery" && /* @__PURE__ */ React.createElement(GalleryScreen, null), activeTab === "scoring" && /* @__PURE__ */ React.createElement(ScoringScreen, { state, onUpdateScore: handleUpdateScore, onBulkUpdate: handleBulkUpdateScores }), activeTab === "leaderboard" && /* @__PURE__ */ React.createElement(LeaderboardScreen, { state }), activeTab === "settings" && /* @__PURE__ */ React.createElement(SettingsScreen, { autoFilled: !!state.autoFilled, scores: state.scores, onBulkUpdate: handleBulkUpdateScores })));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(/* @__PURE__ */ React.createElement(App, null));
 

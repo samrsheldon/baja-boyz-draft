@@ -206,6 +206,21 @@
       'Quarterfinal': 3, 'Semifinal': 4, '3rd Place': 5, 'Runner-up': 6, 'Champion': 7,
     };
 
+    // Knockout matches expose their round on event.season.slug (seasonType is null).
+    const ESPN_SLUG_TO_KO_ROUND = {
+      'round-of-32':   'Round of 32',
+      'round-of-16':   'Round of 16',
+      'quarterfinals': 'Quarterfinal',
+      'semifinals':    'Semifinal',
+      'third-place':   '3rd Place',
+      'final':         'Final',
+    };
+    const KO_ROUNDS = ['Round of 32', 'Round of 16', 'Quarterfinal', 'Semifinal', '3rd Place', 'Final'];
+    const KO_ROUND_SHORT = {
+      'Round of 32': 'R32', 'Round of 16': 'R16', 'Quarterfinal': 'QF',
+      'Semifinal': 'SF', '3rd Place': '3rd', 'Final': 'Final',
+    };
+
     const CONF_COLORS = {
       UEFA:     'text-blue-400',
       CONMEBOL: 'text-emerald-400',
@@ -1022,6 +1037,158 @@
       if (code === 85 || code === 86) return { emoji: '🌨️', label: 'Snow showers' };
       if (code >= 95) return { emoji: '⛈️', label: 'Thunderstorm' };
       return { emoji: '🌡️', label: '' };
+    }
+
+
+    // ─── KNOCKOUT BRACKET SCREEN ──────────────────────────────────────────────
+
+    function KnockoutScreen({ state }) {
+      const { players, draftOrder, picks } = state;
+      const [matches, setMatches] = React.useState(null);
+      const [loading, setLoading] = React.useState(true);
+      const [error, setError]     = React.useState('');
+      const [round, setRound]     = React.useState(null);
+
+      const ownerByTeamId = React.useMemo(() => {
+        const m = {};
+        picks.forEach((teamId, idx) => { if (teamId) m[teamId] = players[pickToPlayer(idx, draftOrder)]; });
+        return m;
+      }, [picks, draftOrder, players]);
+
+      React.useEffect(() => {
+        let cancelled = false;
+        const load = async (initial) => {
+          if (initial) { setLoading(true); setError(''); }
+          try {
+            // Knockout window: June 28 – July 19, 2026
+            const dates = [];
+            const start = Date.UTC(2026, 5, 28);
+            for (let i = 0; i < 22; i++) {
+              const d = new Date(start + i * 86400000);
+              dates.push(`${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`);
+            }
+            const res = await Promise.allSettled(dates.map(dt =>
+              fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${dt}`).then(r => r.json())
+            ));
+            const evs = [];
+            const seen = new Set();
+            for (const r of res) {
+              if (r.status !== 'fulfilled') continue;
+              for (const e of (r.value?.events || [])) {
+                const ko = ESPN_SLUG_TO_KO_ROUND[e.season?.slug];
+                if (!ko || seen.has(e.id)) continue;
+                seen.add(e.id);
+                const comps = e.competitions?.[0]?.competitors || [];
+                const home = comps.find(c => c.homeAway === 'home') || comps[0];
+                const away = comps.find(c => c.homeAway === 'away') || comps[1];
+                const st = e.competitions?.[0]?.status?.type;
+                evs.push({
+                  id: e.id, round: ko, date: new Date(e.date),
+                  state: st?.state, detail: st?.shortDetail,
+                  home, away,
+                  homeScore: home?.score?.displayValue ?? home?.score?.value ?? home?.score,
+                  awayScore: away?.score?.displayValue ?? away?.score?.value ?? away?.score,
+                });
+              }
+            }
+            evs.sort((a, b) => a.date - b.date);
+            if (!cancelled) { setMatches(evs); setError(''); }
+          } catch (err) {
+            if (!cancelled && initial) setError(err.message || 'Failed to load bracket');
+          } finally {
+            if (!cancelled && initial) setLoading(false);
+          }
+        };
+        load(true);
+        const iv = setInterval(() => load(false), 60000);
+        return () => { cancelled = true; clearInterval(iv); };
+      }, []);
+
+      const byRound = React.useMemo(() => {
+        const m = {};
+        (matches || []).forEach(x => { (m[x.round] = m[x.round] || []).push(x); });
+        return m;
+      }, [matches]);
+
+      const availableRounds = KO_ROUNDS.filter(r => byRound[r]?.length);
+      const activeRound = (round && availableRounds.includes(round)) ? round : availableRounds[0];
+
+      function side(comp, score, won) {
+        const id = String(comp?.team?.id ?? '');
+        const team = TEAM_BY_ESPN[id];
+        const flag = team?.flag || '⬜️';
+        const name = team?.name || comp?.team?.shortDisplayName || comp?.team?.displayName || 'TBD';
+        const owner = team ? ownerByTeamId[team.id] : null;
+        const placeholder = !team;
+        return (
+          <div className={`flex items-center gap-2 px-3 py-2 ${won ? 'bg-green-900/20' : ''}`}>
+            <span className="text-lg flex-shrink-0">{flag}</span>
+            <div className="flex-1 min-w-0">
+              <div className={`text-sm truncate ${placeholder ? 'text-gray-500 italic' : won ? 'font-bold text-white' : 'text-gray-200'}`}>{name}</div>
+              {owner && <div className="text-[11px] text-green-400 truncate">{owner}</div>}
+            </div>
+            {won && <span className="text-green-400 text-xs flex-shrink-0">✓</span>}
+            {score != null && score !== '' && (
+              <span className={`text-base font-black flex-shrink-0 w-5 text-right ${won ? 'text-white' : 'text-gray-400'}`}>{score}</span>
+            )}
+          </div>
+        );
+      }
+
+      return (
+        <div className="p-4 md:p-6 max-w-2xl mx-auto">
+          <h2 className="text-xl font-black text-white mb-1">Knockout Bracket</h2>
+          <p className="text-xs text-gray-500 mb-4">Live from ESPN · teams & owners fill in as the groups finish · knockouts begin June 28</p>
+
+          {loading && <p className="text-gray-500 text-sm">Loading bracket…</p>}
+          {error && <p className="text-red-400 text-sm">Error: {error}</p>}
+          {!loading && !error && availableRounds.length === 0 && (
+            <p className="text-gray-500 text-sm">Bracket not published yet — check back closer to June 28.</p>
+          )}
+
+          {availableRounds.length > 0 && (
+            <>
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {availableRounds.map(r => (
+                  <button
+                    key={r}
+                    onClick={() => setRound(r)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                      r === activeRound ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    }`}
+                  >
+                    {KO_ROUND_SHORT[r]}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-3">
+                {(byRound[activeRound] || []).map(m => {
+                  const live = m.state === 'in';
+                  const done = m.state === 'post' || m.detail === 'FT';
+                  const aWon = done && m.away?.winner;
+                  const hWon = done && m.home?.winner;
+                  return (
+                    <div key={m.id} className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
+                      {side(m.away, m.awayScore, aWon)}
+                      <div className="border-t border-gray-700/60" />
+                      {side(m.home, m.homeScore, hWon)}
+                      <div className="px-3 py-1.5 bg-gray-900/50 border-t border-gray-700/60 flex items-center justify-between">
+                        <span className="text-[10px] text-gray-500">
+                          {m.date.toLocaleDateString('en', { month: 'short', day: 'numeric' })} · {m.date.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}
+                        </span>
+                        {live
+                          ? <span className="text-[10px] font-bold text-red-400 animate-pulse">● {m.detail || 'LIVE'}</span>
+                          : <span className="text-[10px] text-gray-600">{done ? 'Full Time' : 'Scheduled'}</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      );
     }
 
 
@@ -2551,6 +2718,7 @@
         { id: 'leaderboard', emoji: '🏆', label: 'Ldrboard' },
         { id: 'groups',      emoji: '🗓', label: 'Groups' },
         { id: 'fixtures',    emoji: '⚽️', label: 'Fixtures' },
+        { id: 'bracket',     emoji: '🥊', label: 'Bracket' },
         { id: 'rosters',     emoji: '👥', label: 'Rosters' },
         { id: 'gallery',     emoji: '📸', label: 'Gallery' },
         { id: 'rankings',    emoji: '🌍', label: 'Rankings' },
@@ -2608,6 +2776,7 @@
           <main className="flex-1 overflow-auto">
             {activeTab === 'draft'       && <DraftScreen       state={state} onPick={handlePick} onUndo={handleUndo} onShare={setPassModal} />}
             {activeTab === 'fixtures'    && <FixturesScreen    state={state} />}
+            {activeTab === 'bracket'     && <KnockoutScreen    state={state} />}
             {activeTab === 'rosters'     && <RostersScreen     state={state} />}
             {activeTab === 'groups'      && <GroupsScreen      state={state} />}
             {activeTab === 'rankings'    && <RankingsScreen    state={state} />}
