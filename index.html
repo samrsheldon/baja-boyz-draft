@@ -516,9 +516,17 @@ async function fetchESPNScores(currentScores) {
   );
   const newScores = __spreadValues({}, currentScores);
   let updated = 0;
+  const SLUG_TO_SCORING_ROUND = {
+    "round-of-32": "Round of 32",
+    "round-of-16": "Round of 16",
+    "quarterfinals": "Quarterfinal",
+    "semifinals": "Semifinal",
+    "third-place": "3rd Place",
+    "final": "Runner-up"
+  };
   const roundOf = (e) => {
-    var _a2;
-    return ESPN_ROUND_NAME_TO_ROUND[(((_a2 = e.seasonType) == null ? void 0 : _a2.name) || "").toLowerCase()] || null;
+    var _a2, _b2;
+    return SLUG_TO_SCORING_ROUND[(_a2 = e.season) == null ? void 0 : _a2.slug] || ESPN_ROUND_NAME_TO_ROUND[(((_b2 = e.seasonType) == null ? void 0 : _b2.name) || "").toLowerCase()] || null;
   };
   for (const result of fetched) {
     if (result.status !== "fulfilled") continue;

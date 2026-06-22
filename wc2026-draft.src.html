@@ -662,7 +662,18 @@
 
       const newScores = { ...currentScores };
       let updated = 0;
-      const roundOf = e => ESPN_ROUND_NAME_TO_ROUND[(e.seasonType?.name || '').toLowerCase()] || null;
+      // Detect the round from EITHER season.slug (how knockout matches are tagged) OR
+      // seasonType.name (how group matches are tagged) — covers both shapes ESPN uses.
+      // Knockout slugs map to our scoring rounds (final → Runner-up, upgraded to Champion if won).
+      const SLUG_TO_SCORING_ROUND = {
+        'round-of-32': 'Round of 32', 'round-of-16': 'Round of 16',
+        'quarterfinals': 'Quarterfinal', 'semifinals': 'Semifinal',
+        'third-place': '3rd Place', 'final': 'Runner-up',
+      };
+      const roundOf = e =>
+        SLUG_TO_SCORING_ROUND[e.season?.slug]
+        || ESPN_ROUND_NAME_TO_ROUND[(e.seasonType?.name || '').toLowerCase()]
+        || null;
 
       for (const result of fetched) {
         if (result.status !== 'fulfilled') continue;

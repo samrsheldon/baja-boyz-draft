@@ -44,10 +44,20 @@ ROUND_ORDER = {
     "Eliminated (Group Stage)": 0, "Round of 32": 1, "Round of 16": 2,
     "Quarterfinal": 3, "Semifinal": 4, "3rd Place": 5, "Runner-up": 6, "Champion": 7,
 }
+# Knockout matches tag the round on season.slug (seasonType is null there).
+SLUG_TO_ROUND = {
+    "round-of-32": "Round of 32", "round-of-16": "Round of 16",
+    "quarterfinals": "Quarterfinal", "semifinals": "Semifinal",
+    "third-place": "3rd Place", "final": "Runner-up",
+}
 
 
 def round_of(event):
-    name = (event.get("seasonType", {}).get("name", "") or "").lower()
+    # Try season.slug (knockouts) first, then seasonType.name (group stage).
+    slug = (event.get("season") or {}).get("slug")
+    if slug in SLUG_TO_ROUND:
+        return SLUG_TO_ROUND[slug]
+    name = ((event.get("seasonType") or {}).get("name", "") or "").lower()
     return ROUND_NAME_TO_ROUND.get(name)
 
 
