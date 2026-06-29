@@ -594,6 +594,47 @@
 
       const hasPicks = picks.some(p => p !== null);
 
+      // Determine eliminated teams from ESPN: a team is OUT if it lost a completed
+      // knockout match, or (once the bracket is set) it didn't qualify from its group.
+      const [eliminated, setEliminated] = React.useState(() => new Set());
+      React.useEffect(() => {
+        let cancelled = false;
+        (async () => {
+          try {
+            const dates = [];
+            const start = Date.UTC(2026, 5, 28); // June 28
+            for (let i = 0; i < 22; i++) {
+              const d = new Date(start + i * 86400000);
+              dates.push(`${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`);
+            }
+            const res = await Promise.allSettled(dates.map(dt =>
+              fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${dt}`).then(r => r.json())
+            ));
+            const qualifiers = new Set();
+            const losers = new Set();
+            for (const r of res) {
+              if (r.status !== 'fulfilled') continue;
+              for (const e of (r.value?.events || [])) {
+                if (!ESPN_SLUG_TO_KO_ROUND[e.season?.slug]) continue; // knockout matches only
+                const st = e.competitions?.[0]?.status?.type;
+                const done = st?.completed || st?.state === 'post';
+                for (const c of (e.competitions?.[0]?.competitors || [])) {
+                  const t = TEAM_BY_ESPN[String(c.team?.id ?? '')];
+                  if (!t) continue;            // placeholder slot, skip
+                  qualifiers.add(t.id);        // real team appearing in a knockout fixture = qualified
+                  if (done && c.winner === false) losers.add(t.id); // lost a knockout = out
+                }
+              }
+            }
+            const bracketSet = qualifiers.size >= 32; // all 32 R32 slots are real teams
+            const elim = new Set(losers);
+            if (bracketSet) TEAMS.forEach(t => { if (!qualifiers.has(t.id)) elim.add(t.id); });
+            if (!cancelled) setEliminated(elim);
+          } catch (e) { /* leave eliminated empty on failure */ }
+        })();
+        return () => { cancelled = true; };
+      }, []);
+
       return (
         <div className="p-4 md:p-6 max-w-6xl mx-auto">
           <h2 className="text-xl font-black text-white mb-5">Rosters</h2>
@@ -617,11 +658,12 @@
                   ) : (
                     teams.map(team => {
                       const s = scores[team.id];
+                      const isOut = eliminated.has(team.id);
                       return (
-                        <div key={team.id} className="flex items-center gap-2">
-                          <span className="text-xl">{team.flag}</span>
+                        <div key={team.id} className={`flex items-center gap-2 ${isOut ? 'opacity-50' : ''}`}>
+                          <span className={`text-xl ${isOut ? 'grayscale' : ''}`}>{team.flag}</span>
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm text-white font-medium truncate">{team.name}</div>
+                            <div className={`text-sm font-medium truncate ${isOut ? 'line-through text-gray-500' : 'text-white'}`}>{team.name}</div>
                             {s ? (
                               <div className="text-xs text-gray-400">
                                 {s.groupPoints} gp · {s.roundReached?.replace('Eliminated (Group Stage)', 'Elim.')}
