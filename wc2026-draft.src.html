@@ -928,6 +928,7 @@
     function LeaderboardScreen({ state }) {
       const { players, draftOrder, picks, scores } = state;
       const [expanded, setExpanded] = useState(null);
+      const [showRules, setShowRules] = useState(false);
 
       const board = useMemo(() => {
         return players.map((player, pIdx) => {
@@ -951,7 +952,41 @@
 
       return (
         <div className="p-4 md:p-6 max-w-2xl mx-auto">
-          <h2 className="text-xl font-black text-white mb-5">Leaderboard</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xl font-black text-white">Leaderboard</h2>
+            <button
+              onClick={() => setShowRules(v => !v)}
+              className="text-xs text-gray-400 hover:text-white bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 transition-colors"
+            >
+              {showRules ? '✕ Close' : 'ℹ️ How scoring works'}
+            </button>
+          </div>
+
+          {showRules && (
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 mb-5 text-sm space-y-3">
+              <div>
+                <div className="font-bold text-white mb-1">⚽️ Group stage</div>
+                <p className="text-gray-400 text-xs leading-relaxed">Points are earned per match: <span className="text-green-400 font-semibold">Win +3</span>, <span className="text-green-400 font-semibold">Draw +1</span>, Loss 0. (Max 9 from 3 group games.)</p>
+              </div>
+              <div>
+                <div className="font-bold text-white mb-1">🥊 Knockout bonus</div>
+                <p className="text-gray-400 text-xs leading-relaxed mb-2">No per-match win points in the knockouts. Instead, each team earns a <span className="text-white font-semibold">one-time bonus for the furthest round it reaches</span> — even if it loses there. The bonus <span className="text-white font-semibold">replaces</span> the previous one (it doesn't stack), so advancing lifts a team to the next tier:</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  <div className="flex justify-between text-gray-300"><span>Round of 32</span><span className="text-green-400 font-bold">+8</span></div>
+                  <div className="flex justify-between text-gray-300"><span>Round of 16</span><span className="text-green-400 font-bold">+14</span></div>
+                  <div className="flex justify-between text-gray-300"><span>Quarterfinal</span><span className="text-green-400 font-bold">+22</span></div>
+                  <div className="flex justify-between text-gray-300"><span>Semifinal</span><span className="text-green-400 font-bold">+32</span></div>
+                  <div className="flex justify-between text-gray-300"><span>3rd Place</span><span className="text-green-400 font-bold">+38</span></div>
+                  <div className="flex justify-between text-gray-300"><span>Runner-up</span><span className="text-green-400 font-bold">+45</span></div>
+                  <div className="flex justify-between text-gray-300"><span>Champion 👑</span><span className="text-green-400 font-bold">+55</span></div>
+                </div>
+              </div>
+              <div className="border-t border-gray-700 pt-2">
+                <p className="text-gray-400 text-xs leading-relaxed"><span className="text-white font-semibold">Your total</span> = group points + the round bonus of your furthest-reaching team, summed across all your teams. Tap any player to see the breakdown.</p>
+              </div>
+              <p className="text-gray-500 text-[11px] italic">Example: a team that wins twice in the group (6 pts) then loses in the Round of 16 scores 6 + 14 = 20.</p>
+            </div>
+          )}
 
           {!hasAnyScore && (
             <p className="text-gray-500 text-sm mb-4">Scores will appear here once you enter results on the Scoring tab.</p>
