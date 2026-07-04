@@ -574,28 +574,10 @@
 
     // ─── ROSTERS SCREEN ───────────────────────────────────────────────────────
 
-    function RostersScreen({ state }) {
-      const { players, draftOrder, picks, scores } = state;
-
-      const rosters = useMemo(() => {
-        return players.map((player, pIdx) => {
-          const teams = picks
-            .map((teamId, pickIdx) => ({ teamId, pickIdx }))
-            .filter(({ teamId, pickIdx }) => teamId && pickToPlayer(pickIdx, draftOrder) === pIdx)
-            .map(({ teamId }) => TEAM_BY_ID[teamId])
-            .filter(Boolean);
-          const total = teams.reduce((sum, t) => {
-            const s = scores[t.id] || {};
-            return sum + (s.groupPoints || 0) + (ROUND_BONUS[s.roundReached] || 0);
-          }, 0);
-          return { player, teams, total };
-        });
-      }, [players, draftOrder, picks, scores]);
-
-      const hasPicks = picks.some(p => p !== null);
-
-      // Determine eliminated teams from ESPN: a team is OUT if it lost a completed
-      // knockout match, or (once the bracket is set) it didn't qualify from its group.
+    // Shared hook: returns a Set of eliminated team ids (lost a completed knockout
+    // match, or — once the bracket is set — didn't qualify from the group). Used by
+    // both the Rosters and Leaderboard screens.
+    function useEliminatedTeams() {
       const [eliminated, setEliminated] = React.useState(() => new Set());
       React.useEffect(() => {
         let cancelled = false;
@@ -634,6 +616,29 @@
         })();
         return () => { cancelled = true; };
       }, []);
+      return eliminated;
+    }
+
+    function RostersScreen({ state }) {
+      const { players, draftOrder, picks, scores } = state;
+
+      const rosters = useMemo(() => {
+        return players.map((player, pIdx) => {
+          const teams = picks
+            .map((teamId, pickIdx) => ({ teamId, pickIdx }))
+            .filter(({ teamId, pickIdx }) => teamId && pickToPlayer(pickIdx, draftOrder) === pIdx)
+            .map(({ teamId }) => TEAM_BY_ID[teamId])
+            .filter(Boolean);
+          const total = teams.reduce((sum, t) => {
+            const s = scores[t.id] || {};
+            return sum + (s.groupPoints || 0) + (ROUND_BONUS[s.roundReached] || 0);
+          }, 0);
+          return { player, teams, total };
+        });
+      }, [players, draftOrder, picks, scores]);
+
+      const hasPicks = picks.some(p => p !== null);
+      const eliminated = useEliminatedTeams();
 
       return (
         <div className="p-4 md:p-6 max-w-6xl mx-auto">
@@ -971,6 +976,7 @@
       const { players, draftOrder, picks, scores } = state;
       const [expanded, setExpanded] = useState(null);
       const [showRules, setShowRules] = useState(false);
+      const eliminated = useEliminatedTeams();
 
       const board = useMemo(() => {
         return players.map((player, pIdx) => {
@@ -1064,16 +1070,20 @@
                         </tr>
                       </thead>
                       <tbody>
-                        {[...breakdown].sort((a, b) => b.subtotal - a.subtotal).map(({ team, gp, rb, subtotal }) => (
-                          <tr key={team.id} className="border-t border-gray-700/50">
+                        {[...breakdown].sort((a, b) => b.subtotal - a.subtotal).map(({ team, gp, rb, subtotal }) => {
+                          const isOut = eliminated.has(team.id);
+                          return (
+                          <tr key={team.id} className={`border-t border-gray-700/50 ${isOut ? 'opacity-50' : ''}`}>
                             <td className="py-1.5 text-gray-200">
-                              <span className="mr-1.5">{team.flag}</span>{team.name}
+                              <span className={`mr-1.5 ${isOut ? 'grayscale' : ''}`}>{team.flag}</span>
+                              <span className={isOut ? 'line-through text-gray-500' : ''}>{team.name}</span>
                             </td>
                             <td className="text-right text-gray-400">{gp || '—'}</td>
                             <td className="text-right text-gray-400">{rb > 0 ? `+${rb}` : '—'}</td>
                             <td className="text-right font-bold text-green-400">{subtotal || 0}</td>
                           </tr>
-                        ))}
+                          );
+                        })}
                         <tr className="border-t border-gray-600 mt-1">
                           <td colSpan="3" className="pt-2 text-right text-gray-400 text-xs uppercase tracking-wide">Total</td>
                           <td className="text-right pt-2 font-black text-green-400 text-xl">{total}</td>
