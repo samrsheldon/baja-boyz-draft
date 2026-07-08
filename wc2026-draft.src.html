@@ -2898,7 +2898,6 @@
         { id: 'groups',      emoji: '🗓', label: 'Groups' },
         { id: 'fixtures',    emoji: '⚽️', label: 'Fixtures' },
         { id: 'bracket',     emoji: '🥊', label: 'Bracket' },
-        { id: 'rosters',     emoji: '👥', label: 'Rosters' },
         { id: 'gallery',     emoji: '📸', label: 'Gallery' },
         { id: 'rankings',    emoji: '🌍', label: 'Rankings' },
         { id: 'settings',    emoji: '⚙️',  label: 'Settings' },
@@ -2956,7 +2955,6 @@
             {activeTab === 'draft'       && <DraftScreen       state={state} onPick={handlePick} onUndo={handleUndo} onShare={setPassModal} />}
             {activeTab === 'fixtures'    && <FixturesScreen    state={state} />}
             {activeTab === 'bracket'     && <KnockoutScreen    state={state} />}
-            {activeTab === 'rosters'     && <RostersScreen     state={state} />}
             {activeTab === 'groups'      && <GroupsScreen      state={state} />}
             {activeTab === 'rankings'    && <RankingsScreen    state={state} />}
             {activeTab === 'gallery'     && <GalleryScreen     />}
