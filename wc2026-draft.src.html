@@ -978,6 +978,7 @@
       const [showRules, setShowRules] = useState(false);
       const eliminated = useEliminatedTeams();
 
+      const CHAMPION_BONUS = ROUND_BONUS['Champion']; // 55 — a live team's max possible bonus
       const board = useMemo(() => {
         return players.map((player, pIdx) => {
           const breakdown = picks
@@ -988,12 +989,16 @@
               const s    = scores[teamId] || {};
               const gp   = s.groupPoints || 0;
               const rb   = ROUND_BONUS[s.roundReached] || 0;
-              return { team, gp, rb, subtotal: gp + rb };
+              const alive = !eliminated.has(teamId);
+              return { team, gp, rb, subtotal: gp + rb, alive };
             });
           const total = breakdown.reduce((s, b) => s + b.subtotal, 0);
-          return { player, breakdown, total };
+          // Ceiling: if every still-alive team ran the table to the title (+55 each)
+          const upside = breakdown.reduce((s, b) => s + (b.alive ? (CHAMPION_BONUS - b.rb) : 0), 0);
+          const aliveCount = breakdown.filter(b => b.alive).length;
+          return { player, breakdown, total, ceiling: total + upside, aliveCount };
         }).sort((a, b) => b.total - a.total);
-      }, [players, draftOrder, picks, scores]);
+      }, [players, draftOrder, picks, scores, eliminated]);
 
       const medals = ['🥇', '🥈', '🥉'];
       const hasAnyScore = Object.keys(scores).length > 0;
@@ -1040,8 +1045,15 @@
             <p className="text-gray-500 text-sm mb-4">Scores will appear here once you enter results on the Scoring tab.</p>
           )}
 
+          {hasAnyScore && (
+            <p className="text-[11px] text-gray-500 mb-2">
+              <span className="text-white font-bold">Bold</span> = current points ·
+              <span className="text-amber-400 font-semibold"> ↑ ceiling</span> = max possible if every surviving team ran the table 👑
+            </p>
+          )}
+
           <div className="space-y-2">
-            {board.map(({ player, breakdown, total }, rank) => (
+            {board.map(({ player, breakdown, total, ceiling, aliveCount }, rank) => (
               <div key={player} className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
                 <div
                   className="flex items-center gap-4 px-4 py-3.5 cursor-pointer hover:bg-gray-700/40 transition-colors"
@@ -1052,9 +1064,18 @@
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-white">{player}</div>
-                    <div className="text-xs text-gray-500">{breakdown.length} teams · tap to expand</div>
+                    <div className="text-xs text-gray-500">
+                      {aliveCount > 0
+                        ? <><span className="text-green-500 font-semibold">{aliveCount} still alive</span> · tap to expand</>
+                        : <>all teams out · tap to expand</>}
+                    </div>
                   </div>
-                  <div className="text-2xl font-black text-green-400 flex-shrink-0">{total}</div>
+                  <div className="text-right flex-shrink-0 leading-tight">
+                    <div className="text-2xl font-black text-green-400">{total}</div>
+                    {ceiling > total && (
+                      <div className="text-[11px] text-amber-400 font-semibold">↑ {ceiling}</div>
+                    )}
+                  </div>
                   <div className="text-gray-600 text-xs">{expanded === player ? '▲' : '▼'}</div>
                 </div>
 
@@ -1140,8 +1161,19 @@
 
     // ─── KNOCKOUT BRACKET SCREEN ──────────────────────────────────────────────
 
+    // What round a team is guaranteed to reach by WINNING a match of the given round
+    // (they advance and will play the next round). Used for "points at stake".
+    const KO_WIN_ADVANCE = {
+      'Round of 32': 'Round of 16',
+      'Round of 16': 'Quarterfinal',
+      'Quarterfinal': 'Semifinal',
+      'Semifinal': 'Runner-up',   // reaching the final guarantees at least Runner-up
+      '3rd Place': '3rd Place',
+      'Final': 'Champion',
+    };
+
     function KnockoutScreen({ state }) {
-      const { players, draftOrder, picks } = state;
+      const { players, draftOrder, picks, scores } = state;
       const [matches, setMatches] = React.useState(null);
       const [loading, setLoading] = React.useState(true);
       const [error, setError]     = React.useState('');
@@ -1211,7 +1243,17 @@
       const availableRounds = KO_ROUNDS.filter(r => byRound[r]?.length);
       const activeRound = (round && availableRounds.includes(round)) ? round : availableRounds[0];
 
-      function side(comp, score, won) {
+      // Points the owner banks if this team WINS a match of the given round
+      function winStake(comp, round) {
+        const team = TEAM_BY_ESPN[String(comp?.team?.id ?? '')];
+        if (!team || !ownerByTeamId[team.id]) return 0;
+        const winTier = KO_WIN_ADVANCE[round];
+        if (!winTier) return 0;
+        const cur = ROUND_BONUS[(scores[team.id] || {}).roundReached] || 0;
+        return Math.max(0, (ROUND_BONUS[winTier] || 0) - cur);
+      }
+
+      function side(comp, score, won, stake) {
         const id = String(comp?.team?.id ?? '');
         const team = TEAM_BY_ESPN[id];
         const flag = team?.flag || '⬜️';
@@ -1225,6 +1267,9 @@
               <div className={`text-sm truncate ${placeholder ? 'text-gray-500 italic' : won ? 'font-bold text-white' : 'text-gray-200'}`}>{name}</div>
               {owner && <div className="text-[11px] text-green-400 truncate">{owner}</div>}
             </div>
+            {stake > 0 && (
+              <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 rounded px-1.5 py-0.5 flex-shrink-0 whitespace-nowrap">+{stake} if win</span>
+            )}
             {won && <span className="text-green-400 text-xs flex-shrink-0">✓</span>}
             {score != null && score !== '' && (
               <span className={`text-base font-black flex-shrink-0 w-5 text-right ${won ? 'text-white' : 'text-gray-400'}`}>{score}</span>
@@ -1236,7 +1281,7 @@
       return (
         <div className="p-4 md:p-6 max-w-2xl mx-auto">
           <h2 className="text-xl font-black text-white mb-1">Knockout Bracket</h2>
-          <p className="text-xs text-gray-500 mb-4">Live from ESPN · teams & owners fill in as the groups finish · knockouts begin June 28</p>
+          <p className="text-xs text-gray-500 mb-4">Live from ESPN · <span className="text-amber-400 font-semibold">+N if win</span> = points the owner banks if that team advances</p>
 
           {loading && <p className="text-gray-500 text-sm">Loading bracket…</p>}
           {error && <p className="text-red-400 text-sm">Error: {error}</p>}
@@ -1266,11 +1311,12 @@
                   const done = m.state === 'post' || m.detail === 'FT';
                   const aWon = done && m.away?.winner;
                   const hWon = done && m.home?.winner;
+                  const showStakes = !done; // only for upcoming / live matches
                   return (
                     <div key={m.id} className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
-                      {side(m.away, m.awayScore, aWon)}
+                      {side(m.away, m.awayScore, aWon, showStakes ? winStake(m.away, m.round) : 0)}
                       <div className="border-t border-gray-700/60" />
-                      {side(m.home, m.homeScore, hWon)}
+                      {side(m.home, m.homeScore, hWon, showStakes ? winStake(m.home, m.round) : 0)}
                       <div className="px-3 py-1.5 bg-gray-900/50 border-t border-gray-700/60 flex items-center justify-between">
                         <span className="text-[10px] text-gray-500">
                           {m.date.toLocaleDateString('en', { month: 'short', day: 'numeric' })} · {m.date.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}
