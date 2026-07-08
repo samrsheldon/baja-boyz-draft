@@ -574,11 +574,13 @@
 
     // ─── ROSTERS SCREEN ───────────────────────────────────────────────────────
 
-    // Shared hook: returns a Set of eliminated team ids (lost a completed knockout
-    // match, or — once the bracket is set — didn't qualify from the group). Used by
-    // both the Rosters and Leaderboard screens.
-    function useEliminatedTeams() {
-      const [eliminated, setEliminated] = React.useState(() => new Set());
+    // Shared hook: returns knockout state from ESPN —
+    //   eliminated: Set of team ids that are out (lost a completed KO match, or didn't
+    //               qualify from the group once the bracket is set)
+    //   nextMatch:  { [teamId]: { round, opponentId } } for teams in an UPCOMING KO match
+    // Used by Rosters (eliminated) and Leaderboard (both, for the bracket-aware ceiling).
+    function useKnockoutInfo() {
+      const [info, setInfo] = React.useState(() => ({ eliminated: new Set(), nextMatch: {} }));
       React.useEffect(() => {
         let cancelled = false;
         (async () => {
@@ -594,29 +596,37 @@
             ));
             const qualifiers = new Set();
             const losers = new Set();
+            const nextMatch = {};
             for (const r of res) {
               if (r.status !== 'fulfilled') continue;
               for (const e of (r.value?.events || [])) {
-                if (!ESPN_SLUG_TO_KO_ROUND[e.season?.slug]) continue; // knockout matches only
+                const round = ESPN_SLUG_TO_KO_ROUND[e.season?.slug];
+                if (!round) continue;          // knockout matches only
                 const st = e.competitions?.[0]?.status?.type;
                 const done = st?.completed || st?.state === 'post';
-                for (const c of (e.competitions?.[0]?.competitors || [])) {
+                const comps = e.competitions?.[0]?.competitors || [];
+                for (const c of comps) {
                   const t = TEAM_BY_ESPN[String(c.team?.id ?? '')];
                   if (!t) continue;            // placeholder slot, skip
-                  qualifiers.add(t.id);        // real team appearing in a knockout fixture = qualified
+                  qualifiers.add(t.id);        // real team in a knockout fixture = qualified
                   if (done && c.winner === false) losers.add(t.id); // lost a knockout = out
+                  if (!done) {                 // upcoming/live: record opponent for collision logic
+                    const opp = comps.find(x => x !== c);
+                    const oppTeam = opp ? TEAM_BY_ESPN[String(opp.team?.id ?? '')] : null;
+                    nextMatch[t.id] = { round, opponentId: oppTeam ? oppTeam.id : null };
+                  }
                 }
               }
             }
             const bracketSet = qualifiers.size >= 32; // all 32 R32 slots are real teams
             const elim = new Set(losers);
             if (bracketSet) TEAMS.forEach(t => { if (!qualifiers.has(t.id)) elim.add(t.id); });
-            if (!cancelled) setEliminated(elim);
-          } catch (e) { /* leave eliminated empty on failure */ }
+            if (!cancelled) setInfo({ eliminated: elim, nextMatch });
+          } catch (e) { /* leave empty on failure */ }
         })();
         return () => { cancelled = true; };
       }, []);
-      return eliminated;
+      return info;
     }
 
     function RostersScreen({ state }) {
@@ -638,7 +648,7 @@
       }, [players, draftOrder, picks, scores]);
 
       const hasPicks = picks.some(p => p !== null);
-      const eliminated = useEliminatedTeams();
+      const { eliminated } = useKnockoutInfo();
 
       return (
         <div className="p-4 md:p-6 max-w-6xl mx-auto">
@@ -976,9 +986,35 @@
       const { players, draftOrder, picks, scores } = state;
       const [expanded, setExpanded] = useState(null);
       const [showRules, setShowRules] = useState(false);
-      const eliminated = useEliminatedTeams();
+      const { eliminated, nextMatch } = useKnockoutInfo();
 
       const CHAMPION_BONUS = ROUND_BONUS['Champion']; // 55 — a live team's max possible bonus
+      // The bonus a team banks by LOSING a match of the given round (reaches that round).
+      const loserBonus = round => round === 'Final' ? ROUND_BONUS['Runner-up'] : (ROUND_BONUS[round] || 0);
+      // Distinct best finishing positions in one bracket: only one champion, one runner-up,
+      // one 3rd, one 4th (SF), then quarterfinalists (22×4), R16 (14×8)…  A player's K teams
+      // can occupy at most the K deepest distinct outcomes.
+      const TIER_SEQUENCE = [55, 45, 38, 32, 22, 22, 22, 22, 14, 14, 14, 14, 14, 14, 14, 14];
+
+      // Bracket-aware ceiling upside for one player's still-alive teams:
+      // caps by (a) same-owner teams meeting in an upcoming match, and (b) the fact that
+      // only one team can win it all, one can be runner-up, etc.
+      function ceilingUpside(alive) {
+        const target = {};
+        alive.forEach(t => { target[t.id] = CHAMPION_BONUS; });
+        const capped = new Set();
+        alive.forEach(t => {
+          const m = nextMatch[t.id];
+          if (!m || !m.opponentId || !alive.some(x => x.id === m.opponentId)) return;
+          if (capped.has(t.id) || capped.has(m.opponentId)) return;
+          // two of this player's teams face each other → the loser is capped at that round
+          target[m.opponentId] = Math.min(target[m.opponentId], loserBonus(m.round));
+          capped.add(m.opponentId);
+        });
+        const sorted = alive.map(t => ({ rb: t.rb, tgt: target[t.id] })).sort((a, b) => b.tgt - a.tgt);
+        return sorted.reduce((sum, t, i) => sum + Math.max(0, Math.min(t.tgt, TIER_SEQUENCE[i] ?? 14) - t.rb), 0);
+      }
+
       const board = useMemo(() => {
         return players.map((player, pIdx) => {
           const breakdown = picks
@@ -993,12 +1029,11 @@
               return { team, gp, rb, subtotal: gp + rb, alive };
             });
           const total = breakdown.reduce((s, b) => s + b.subtotal, 0);
-          // Ceiling: if every still-alive team ran the table to the title (+55 each)
-          const upside = breakdown.reduce((s, b) => s + (b.alive ? (CHAMPION_BONUS - b.rb) : 0), 0);
-          const aliveCount = breakdown.filter(b => b.alive).length;
-          return { player, breakdown, total, ceiling: total + upside, aliveCount };
+          const aliveTeams = breakdown.filter(b => b.alive).map(b => ({ id: b.team.id, rb: b.rb }));
+          const ceiling = total + ceilingUpside(aliveTeams);
+          return { player, breakdown, total, ceiling, aliveCount: aliveTeams.length };
         }).sort((a, b) => b.total - a.total);
-      }, [players, draftOrder, picks, scores, eliminated]);
+      }, [players, draftOrder, picks, scores, eliminated, nextMatch]);
 
       const medals = ['🥇', '🥈', '🥉'];
       const hasAnyScore = Object.keys(scores).length > 0;

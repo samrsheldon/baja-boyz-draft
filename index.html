@@ -487,12 +487,12 @@ function DraftScreen({ state, onPick, onUndo, onShare }) {
     );
   })))));
 }
-function useEliminatedTeams() {
-  const [eliminated, setEliminated] = React.useState(() => /* @__PURE__ */ new Set());
+function useKnockoutInfo() {
+  const [info, setInfo] = React.useState(() => ({ eliminated: /* @__PURE__ */ new Set(), nextMatch: {} }));
   React.useEffect(() => {
     let cancelled = false;
     (async () => {
-      var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
       try {
         const dates = [];
         const start = Date.UTC(2026, 5, 28);
@@ -505,17 +505,25 @@ function useEliminatedTeams() {
         ));
         const qualifiers = /* @__PURE__ */ new Set();
         const losers = /* @__PURE__ */ new Set();
+        const nextMatch = {};
         for (const r of res) {
           if (r.status !== "fulfilled") continue;
           for (const e of ((_a = r.value) == null ? void 0 : _a.events) || []) {
-            if (!ESPN_SLUG_TO_KO_ROUND[(_b = e.season) == null ? void 0 : _b.slug]) continue;
+            const round = ESPN_SLUG_TO_KO_ROUND[(_b = e.season) == null ? void 0 : _b.slug];
+            if (!round) continue;
             const st = (_e = (_d = (_c = e.competitions) == null ? void 0 : _c[0]) == null ? void 0 : _d.status) == null ? void 0 : _e.type;
             const done = (st == null ? void 0 : st.completed) || (st == null ? void 0 : st.state) === "post";
-            for (const c of ((_g = (_f = e.competitions) == null ? void 0 : _f[0]) == null ? void 0 : _g.competitors) || []) {
+            const comps = ((_g = (_f = e.competitions) == null ? void 0 : _f[0]) == null ? void 0 : _g.competitors) || [];
+            for (const c of comps) {
               const t = TEAM_BY_ESPN[String((_i = (_h = c.team) == null ? void 0 : _h.id) != null ? _i : "")];
               if (!t) continue;
               qualifiers.add(t.id);
               if (done && c.winner === false) losers.add(t.id);
+              if (!done) {
+                const opp = comps.find((x) => x !== c);
+                const oppTeam = opp ? TEAM_BY_ESPN[String((_k = (_j = opp.team) == null ? void 0 : _j.id) != null ? _k : "")] : null;
+                nextMatch[t.id] = { round, opponentId: oppTeam ? oppTeam.id : null };
+              }
             }
           }
         }
@@ -524,7 +532,7 @@ function useEliminatedTeams() {
         if (bracketSet) TEAMS.forEach((t) => {
           if (!qualifiers.has(t.id)) elim.add(t.id);
         });
-        if (!cancelled) setEliminated(elim);
+        if (!cancelled) setInfo({ eliminated: elim, nextMatch });
       } catch (e) {
       }
     })();
@@ -532,7 +540,7 @@ function useEliminatedTeams() {
       cancelled = true;
     };
   }, []);
-  return eliminated;
+  return info;
 }
 function RostersScreen({ state }) {
   const { players, draftOrder, picks, scores } = state;
@@ -547,7 +555,7 @@ function RostersScreen({ state }) {
     });
   }, [players, draftOrder, picks, scores]);
   const hasPicks = picks.some((p) => p !== null);
-  const eliminated = useEliminatedTeams();
+  const { eliminated } = useKnockoutInfo();
   return /* @__PURE__ */ React.createElement("div", { className: "p-4 md:p-6 max-w-6xl mx-auto" }, /* @__PURE__ */ React.createElement("h2", { className: "text-xl font-black text-white mb-5" }, "Rosters"), !hasPicks && /* @__PURE__ */ React.createElement("p", { className: "text-gray-500 text-sm" }, "No picks yet \u2014 start the draft first."), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" }, rosters.map(({ player, teams, total }, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "bg-gray-800 rounded-xl border border-gray-700 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "bg-gray-750 px-4 py-3 border-b border-gray-700 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "font-bold text-white truncate" }, player), total > 0 && /* @__PURE__ */ React.createElement("div", { className: "text-green-400 font-black text-sm ml-2" }, total, " pts")), /* @__PURE__ */ React.createElement("div", { className: "p-3 space-y-2.5" }, teams.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "text-gray-600 text-xs" }, "No picks yet") : teams.map((team) => {
     var _a;
     const s = scores[team.id];
@@ -737,8 +745,29 @@ function LeaderboardScreen({ state }) {
   const { players, draftOrder, picks, scores } = state;
   const [expanded, setExpanded] = useState(null);
   const [showRules, setShowRules] = useState(false);
-  const eliminated = useEliminatedTeams();
+  const { eliminated, nextMatch } = useKnockoutInfo();
   const CHAMPION_BONUS = ROUND_BONUS["Champion"];
+  const loserBonus = (round) => round === "Final" ? ROUND_BONUS["Runner-up"] : ROUND_BONUS[round] || 0;
+  const TIER_SEQUENCE = [55, 45, 38, 32, 22, 22, 22, 22, 14, 14, 14, 14, 14, 14, 14, 14];
+  function ceilingUpside(alive) {
+    const target = {};
+    alive.forEach((t) => {
+      target[t.id] = CHAMPION_BONUS;
+    });
+    const capped = /* @__PURE__ */ new Set();
+    alive.forEach((t) => {
+      const m = nextMatch[t.id];
+      if (!m || !m.opponentId || !alive.some((x) => x.id === m.opponentId)) return;
+      if (capped.has(t.id) || capped.has(m.opponentId)) return;
+      target[m.opponentId] = Math.min(target[m.opponentId], loserBonus(m.round));
+      capped.add(m.opponentId);
+    });
+    const sorted = alive.map((t) => ({ rb: t.rb, tgt: target[t.id] })).sort((a, b) => b.tgt - a.tgt);
+    return sorted.reduce((sum, t, i) => {
+      var _a;
+      return sum + Math.max(0, Math.min(t.tgt, (_a = TIER_SEQUENCE[i]) != null ? _a : 14) - t.rb);
+    }, 0);
+  }
   const board = useMemo(() => {
     return players.map((player, pIdx) => {
       const breakdown = picks.map((teamId, pickIdx) => ({ teamId, pickIdx })).filter(({ teamId, pickIdx }) => teamId && pickToPlayer(pickIdx, draftOrder) === pIdx).map(({ teamId }) => {
@@ -750,11 +779,11 @@ function LeaderboardScreen({ state }) {
         return { team, gp, rb, subtotal: gp + rb, alive };
       });
       const total = breakdown.reduce((s, b) => s + b.subtotal, 0);
-      const upside = breakdown.reduce((s, b) => s + (b.alive ? CHAMPION_BONUS - b.rb : 0), 0);
-      const aliveCount = breakdown.filter((b) => b.alive).length;
-      return { player, breakdown, total, ceiling: total + upside, aliveCount };
+      const aliveTeams = breakdown.filter((b) => b.alive).map((b) => ({ id: b.team.id, rb: b.rb }));
+      const ceiling = total + ceilingUpside(aliveTeams);
+      return { player, breakdown, total, ceiling, aliveCount: aliveTeams.length };
     }).sort((a, b) => b.total - a.total);
-  }, [players, draftOrder, picks, scores, eliminated]);
+  }, [players, draftOrder, picks, scores, eliminated, nextMatch]);
   const medals = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
   const hasAnyScore = Object.keys(scores).length > 0;
   return /* @__PURE__ */ React.createElement("div", { className: "p-4 md:p-6 max-w-2xl mx-auto" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-3" }, /* @__PURE__ */ React.createElement("h2", { className: "text-xl font-black text-white" }, "Leaderboard"), /* @__PURE__ */ React.createElement(
