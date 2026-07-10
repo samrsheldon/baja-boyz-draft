@@ -69,6 +69,9 @@
     .intro-bar { background: linear-gradient(90deg, transparent, #4ade80, transparent); animation: intro-bar 1.4s ease-in-out infinite; }
     @keyframes intro-out { to { opacity: 0; visibility: hidden; } }
     .intro-out { animation: intro-out 0.6s ease forwards; }
+    @keyframes champ-pop { 0% { transform: scale(0.8); opacity: 0; } 60% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes champ-glow { 0%, 100% { box-shadow: 0 0 12px rgba(251,191,36,0.30); } 50% { box-shadow: 0 0 30px rgba(251,191,36,0.65); } }
+    .champ-banner { animation: champ-pop 0.6s cubic-bezier(0.2,0.8,0.2,1) both, champ-glow 2.2s ease-in-out infinite; }
     body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
     .baja-wordmark {
       font-family: 'Libre Baskerville', Georgia, serif;
@@ -849,6 +852,51 @@ const KO_WIN_ADVANCE = {
   "3rd Place": "3rd Place",
   "Final": "Champion"
 };
+function fireConfetti(opts = {}) {
+  const count = opts.count || 130;
+  const duration = opts.duration || 2600;
+  const spread = opts.spread || 0.34;
+  const canvas = document.createElement("canvas");
+  canvas.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999";
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+  const colors = ["#4ade80", "#fbbf24", "#f472b6", "#60a5fa", "#f87171", "#ffffff", "#facc15"];
+  const parts = [];
+  for (let i = 0; i < count; i++) {
+    parts.push({
+      x: canvas.width * (0.5 + (Math.random() - 0.5) * spread),
+      y: canvas.height * 0.32,
+      vx: (Math.random() - 0.5) * 11,
+      vy: Math.random() * -13 - 4,
+      size: Math.random() * 7 + 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rot: Math.random() * Math.PI,
+      vrot: (Math.random() - 0.5) * 0.32
+    });
+  }
+  const start = performance.now();
+  (function frame(now) {
+    const t = now - start;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    parts.forEach((p) => {
+      p.vy += 0.34;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vrot;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.globalAlpha = Math.max(0, 1 - t / duration);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+      ctx.restore();
+    });
+    if (t < duration) requestAnimationFrame(frame);
+    else canvas.remove();
+  })(start);
+}
 function KnockoutScreen({ state }) {
   const { players, draftOrder, picks, scores } = state;
   const [matches, setMatches] = React.useState(null);
@@ -930,6 +978,39 @@ function KnockoutScreen({ state }) {
     });
     return m;
   }, [matches]);
+  const seenDoneRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!matches) return;
+    const doneIds = new Set(matches.filter((m) => {
+      var _a, _b;
+      return (m.state === "post" || m.detail === "FT") && (((_a = m.away) == null ? void 0 : _a.winner) || ((_b = m.home) == null ? void 0 : _b.winner));
+    }).map((m) => m.id));
+    if (seenDoneRef.current === null) {
+      seenDoneRef.current = doneIds;
+      return;
+    }
+    let fresh = false;
+    doneIds.forEach((id) => {
+      if (!seenDoneRef.current.has(id)) fresh = true;
+    });
+    if (fresh) fireConfetti({ count: 110 });
+    seenDoneRef.current = doneIds;
+  }, [matches]);
+  const champTeam = (() => {
+    var _a, _b, _c, _d;
+    const f = (byRound["Final"] || [])[0];
+    if (!f || !(f.state === "post" || f.detail === "FT")) return null;
+    const w = ((_a = f.away) == null ? void 0 : _a.winner) ? f.away : ((_b = f.home) == null ? void 0 : _b.winner) ? f.home : null;
+    return w ? TEAM_BY_ESPN[String((_d = (_c = w.team) == null ? void 0 : _c.id) != null ? _d : "")] : null;
+  })();
+  const champFiredRef = React.useRef(false);
+  React.useEffect(() => {
+    if (champTeam && !champFiredRef.current) {
+      champFiredRef.current = true;
+      fireConfetti({ count: 240, duration: 4200, spread: 0.6 });
+      setTimeout(() => fireConfetti({ count: 160, duration: 3400, spread: 0.7 }), 700);
+    }
+  }, [champTeam]);
   function winStake(comp, rnd) {
     var _a, _b;
     const team = TEAM_BY_ESPN[String((_b = (_a = comp == null ? void 0 : comp.team) == null ? void 0 : _a.id) != null ? _b : "")];
@@ -939,13 +1020,14 @@ function KnockoutScreen({ state }) {
     const cur = ROUND_BONUS[(scores[team.id] || {}).roundReached] || 0;
     return Math.max(0, (ROUND_BONUS[winTier] || 0) - cur);
   }
-  const COLW = 104, GAP = 22, BOXH = 58, TOP = 22;
+  const COLW = 112, GAP = 18, ROW = 30, FOOT = 15, TOP = 24;
+  const BOXH = ROW * 2 + FOOT;
   const colX = [0, COLW + GAP, 2 * (COLW + GAP)];
   const W = colX[2] + COLW;
-  const qfCy = [TOP + 32, TOP + 116, TOP + 200, TOP + 284];
+  const qfCy = [TOP + 40, TOP + 138, TOP + 236, TOP + 334];
   const sfCy = [(qfCy[0] + qfCy[1]) / 2, (qfCy[2] + qfCy[3]) / 2];
   const finCy = (sfCy[0] + sfCy[1]) / 2;
-  const H = TOP + 316;
+  const H = qfCy[3] + BOXH / 2 + 14;
   const midX1 = COLW + GAP / 2, midX2 = colX[1] + COLW + GAP / 2;
   const qfs = (byRound["Quarterfinal"] || []).slice().sort((a, b) => a.date - b.date);
   const sfs = (byRound["Semifinal"] || []).slice().sort((a, b) => a.date - b.date);
@@ -959,7 +1041,7 @@ function KnockoutScreen({ state }) {
     const abbr = (team == null ? void 0 : team.id) || "TBD";
     const owner = team ? ownerByTeamId[team.id] : null;
     const stake = !won && !lost ? winStake(comp, comp == null ? void 0 : comp._round) : 0;
-    return /* @__PURE__ */ React.createElement("div", { className: `flex items-center gap-1 px-1.5 ${won ? "bg-green-900/25" : ""}`, style: { height: BOXH / 2 } }, /* @__PURE__ */ React.createElement("span", { className: `text-sm flex-shrink-0 ${lost ? "grayscale opacity-60" : ""}` }, flag), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0 leading-tight" }, /* @__PURE__ */ React.createElement("div", { className: `text-[11px] font-bold truncate ${!team ? "text-gray-600 italic" : lost ? "text-gray-500 line-through" : won ? "text-white" : "text-gray-200"}` }, abbr), owner && /* @__PURE__ */ React.createElement("div", { className: `text-[8px] truncate ${lost ? "text-gray-600" : "text-green-400"}` }, owner)), stake > 0 && /* @__PURE__ */ React.createElement("span", { className: "text-[8px] font-bold text-amber-400 flex-shrink-0" }, "+", stake), score != null && score !== "" && /* @__PURE__ */ React.createElement("span", { className: `text-xs font-black flex-shrink-0 w-3 text-right ${won ? "text-white" : "text-gray-400"}` }, score));
+    return /* @__PURE__ */ React.createElement("div", { className: `flex items-center gap-1.5 px-2 ${won ? "bg-green-900/25" : ""}`, style: { height: ROW } }, /* @__PURE__ */ React.createElement("span", { className: `text-base flex-shrink-0 ${lost ? "grayscale opacity-60" : ""}` }, flag), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0 leading-tight" }, /* @__PURE__ */ React.createElement("div", { className: `text-[12px] font-bold truncate ${!team ? "text-gray-600 italic" : lost ? "text-gray-500 line-through" : won ? "text-white" : "text-gray-200"}` }, abbr), owner && /* @__PURE__ */ React.createElement("div", { className: `text-[9px] truncate ${lost ? "text-gray-600" : "text-green-400"}` }, owner)), stake > 0 && /* @__PURE__ */ React.createElement("span", { className: "text-[9px] font-bold text-amber-400 flex-shrink-0" }, "+", stake), score != null && score !== "" && /* @__PURE__ */ React.createElement("span", { className: `text-sm font-black flex-shrink-0 w-3 text-right ${won ? "text-white" : "text-gray-400"}` }, score));
   }
   function matchBox(m, x, cy) {
     var _a, _b;
@@ -973,21 +1055,26 @@ function KnockoutScreen({ state }) {
       {
         key: m.id,
         style: { position: "absolute", left: x, top: cy - BOXH / 2, width: COLW },
-        className: `bg-gray-800 border rounded-lg overflow-hidden ${live ? "border-red-500/60" : "border-gray-700"}`
+        className: `bg-gray-800 border rounded-lg overflow-hidden ${live ? "border-red-500/70" : "border-gray-700"}`
       },
       teamRow(away, m.awayScore, aWon, done && !aWon),
       /* @__PURE__ */ React.createElement("div", { className: "border-t border-gray-700/60" }),
       teamRow(home, m.homeScore, hWon, done && !hWon),
-      live && /* @__PURE__ */ React.createElement("div", { className: "text-center text-[7px] font-bold text-red-400 bg-red-500/10 animate-pulse" }, "\u25CF LIVE ", m.detail)
+      /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-center border-t border-gray-700/60 bg-gray-900/50", style: { height: FOOT } }, live ? /* @__PURE__ */ React.createElement("span", { className: "text-[8px] font-bold text-red-400 animate-pulse" }, "\u25CF ", m.detail || "LIVE") : done ? /* @__PURE__ */ React.createElement("span", { className: "text-[8px] text-gray-500 font-semibold" }, "FT") : /* @__PURE__ */ React.createElement("span", { className: "text-[8px] text-gray-500" }, m.date.toLocaleDateString("en", { month: "short", day: "numeric" }), " \xB7 ", m.date.toLocaleTimeString("en", { hour: "numeric", minute: m.date.getMinutes() ? "2-digit" : void 0 })))
     );
   }
   const connector = (childRightX, childCy, midX, parentCy, parentLeftX) => `${childRightX},${childCy} ${midX},${childCy} ${midX},${parentCy} ${parentLeftX},${parentCy}`;
-  return /* @__PURE__ */ React.createElement("div", { className: "p-4 md:p-6 max-w-2xl mx-auto" }, /* @__PURE__ */ React.createElement("h2", { className: "text-xl font-black text-white mb-1" }, "Knockout Bracket"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500 mb-4" }, "Live from ESPN \xB7 ", /* @__PURE__ */ React.createElement("span", { className: "text-amber-400 font-semibold" }, "+N"), " = points the owner banks if that team wins the match"), loading && /* @__PURE__ */ React.createElement("p", { className: "text-gray-500 text-sm" }, "Loading bracket\u2026"), error && /* @__PURE__ */ React.createElement("p", { className: "text-red-400 text-sm" }, "Error: ", error), !loading && !error && !hasBracket && /* @__PURE__ */ React.createElement("p", { className: "text-gray-500 text-sm" }, "Bracket populates once the quarterfinalists are set."), hasBracket && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "overflow-x-auto pb-2 -mx-4 px-4" }, /* @__PURE__ */ React.createElement("div", { style: { position: "relative", width: W, height: H } }, /* @__PURE__ */ React.createElement("svg", { width: W, height: H, style: { position: "absolute", inset: 0, pointerEvents: "none" } }, sfs[0] && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("polyline", { points: connector(COLW, qfCy[0], midX1, sfCy[0], colX[1]), fill: "none", stroke: "#3f3f46", strokeWidth: "1.5" }), /* @__PURE__ */ React.createElement("polyline", { points: connector(COLW, qfCy[1], midX1, sfCy[0], colX[1]), fill: "none", stroke: "#3f3f46", strokeWidth: "1.5" })), sfs[1] && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("polyline", { points: connector(COLW, qfCy[2], midX1, sfCy[1], colX[1]), fill: "none", stroke: "#3f3f46", strokeWidth: "1.5" }), /* @__PURE__ */ React.createElement("polyline", { points: connector(COLW, qfCy[3], midX1, sfCy[1], colX[1]), fill: "none", stroke: "#3f3f46", strokeWidth: "1.5" })), fin && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("polyline", { points: connector(colX[1] + COLW, sfCy[0], midX2, finCy, colX[2]), fill: "none", stroke: "#3f3f46", strokeWidth: "1.5" }), /* @__PURE__ */ React.createElement("polyline", { points: connector(colX[1] + COLW, sfCy[1], midX2, finCy, colX[2]), fill: "none", stroke: "#3f3f46", strokeWidth: "1.5" }))), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", left: colX[0], top: 0, width: COLW }, className: "text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider" }, "Quarters"), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", left: colX[1], top: 0, width: COLW }, className: "text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider" }, "Semis"), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", left: colX[2], top: 0, width: COLW }, className: "text-center text-[10px] font-bold text-amber-400/80 uppercase tracking-wider" }, "Final"), qfs.map((m, i) => matchBox(m, colX[0], qfCy[i])), sfs.map((m, i) => matchBox(m, colX[1], sfCy[i])), fin && matchBox(fin, colX[2], finCy))), fin && (fin.state === "post" || fin.detail === "FT") && (() => {
-    var _a, _b, _c, _d;
-    const champ = ((_a = fin.away) == null ? void 0 : _a.winner) ? fin.away : ((_b = fin.home) == null ? void 0 : _b.winner) ? fin.home : null;
-    const t = champ ? TEAM_BY_ESPN[String((_d = (_c = champ.team) == null ? void 0 : _c.id) != null ? _d : "")] : null;
-    return t ? /* @__PURE__ */ React.createElement("div", { className: "mt-2 text-center bg-amber-400/10 border border-amber-400/30 rounded-xl py-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm font-black text-amber-300" }, "\u{1F3C6} ", t.flag, " ", t.name, " \u2014 CHAMPION"), ownerByTeamId[t.id] && /* @__PURE__ */ React.createElement("span", { className: "text-xs text-green-400 font-bold" }, " \xB7 ", ownerByTeamId[t.id])) : null;
-  })(), third && /* @__PURE__ */ React.createElement("div", { className: "mt-5" }, /* @__PURE__ */ React.createElement("div", { className: "text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5" }, "\u{1F949} 3rd Place Playoff"), /* @__PURE__ */ React.createElement("div", { className: "w-[160px] bg-gray-800 border border-gray-700 rounded-lg overflow-hidden" }, (() => {
+  return /* @__PURE__ */ React.createElement("div", { className: "p-4 md:p-6 max-w-2xl mx-auto" }, /* @__PURE__ */ React.createElement("h2", { className: "text-xl font-black text-white mb-1" }, "Knockout Bracket"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500 mb-4" }, "Live from ESPN \xB7 ", /* @__PURE__ */ React.createElement("span", { className: "text-amber-400 font-semibold" }, "+N"), " = points the owner banks if that team wins the match"), loading && /* @__PURE__ */ React.createElement("p", { className: "text-gray-500 text-sm" }, "Loading bracket\u2026"), error && /* @__PURE__ */ React.createElement("p", { className: "text-red-400 text-sm" }, "Error: ", error), !loading && !error && !hasBracket && /* @__PURE__ */ React.createElement("p", { className: "text-gray-500 text-sm" }, "Bracket populates once the quarterfinalists are set."), hasBracket && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "overflow-x-auto pb-2 -mx-4 px-4" }, /* @__PURE__ */ React.createElement("div", { style: { position: "relative", width: W, height: H } }, /* @__PURE__ */ React.createElement("svg", { width: W, height: H, style: { position: "absolute", inset: 0, pointerEvents: "none" } }, sfs[0] && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("polyline", { points: connector(COLW, qfCy[0], midX1, sfCy[0], colX[1]), fill: "none", stroke: "#3f3f46", strokeWidth: "1.5" }), /* @__PURE__ */ React.createElement("polyline", { points: connector(COLW, qfCy[1], midX1, sfCy[0], colX[1]), fill: "none", stroke: "#3f3f46", strokeWidth: "1.5" })), sfs[1] && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("polyline", { points: connector(COLW, qfCy[2], midX1, sfCy[1], colX[1]), fill: "none", stroke: "#3f3f46", strokeWidth: "1.5" }), /* @__PURE__ */ React.createElement("polyline", { points: connector(COLW, qfCy[3], midX1, sfCy[1], colX[1]), fill: "none", stroke: "#3f3f46", strokeWidth: "1.5" })), fin && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("polyline", { points: connector(colX[1] + COLW, sfCy[0], midX2, finCy, colX[2]), fill: "none", stroke: "#3f3f46", strokeWidth: "1.5" }), /* @__PURE__ */ React.createElement("polyline", { points: connector(colX[1] + COLW, sfCy[1], midX2, finCy, colX[2]), fill: "none", stroke: "#3f3f46", strokeWidth: "1.5" }))), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", left: colX[0], top: 0, width: COLW }, className: "text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider" }, "Quarters"), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", left: colX[1], top: 0, width: COLW }, className: "text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider" }, "Semis"), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", left: colX[2], top: 0, width: COLW }, className: "text-center text-[10px] font-bold text-amber-400/80 uppercase tracking-wider" }, "Final"), qfs.map((m, i) => matchBox(m, colX[0], qfCy[i])), sfs.map((m, i) => matchBox(m, colX[1], sfCy[i])), fin && matchBox(fin, colX[2], finCy))), champTeam && /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      className: "champ-banner mt-3 text-center bg-amber-400/10 border border-amber-400/40 rounded-2xl py-3 cursor-pointer",
+      onClick: () => fireConfetti({ count: 200, duration: 3600, spread: 0.6 })
+    },
+    /* @__PURE__ */ React.createElement("div", { className: "text-3xl mb-0.5" }, "\u{1F3C6}"),
+    /* @__PURE__ */ React.createElement("div", { className: "text-base font-black text-amber-300" }, champTeam.flag, " ", champTeam.name),
+    /* @__PURE__ */ React.createElement("div", { className: "text-[11px] font-bold text-amber-200/80 uppercase tracking-widest" }, "World Champion"),
+    ownerByTeamId[champTeam.id] && /* @__PURE__ */ React.createElement("div", { className: "text-sm text-green-400 font-bold mt-1" }, "Drafted by ", ownerByTeamId[champTeam.id], " \u{1F389}")
+  ), third && /* @__PURE__ */ React.createElement("div", { className: "mt-5" }, /* @__PURE__ */ React.createElement("div", { className: "text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5" }, "\u{1F949} 3rd Place Playoff"), /* @__PURE__ */ React.createElement("div", { className: "w-[160px] bg-gray-800 border border-gray-700 rounded-lg overflow-hidden" }, (() => {
     var _a, _b;
     const done = third.state === "post" || third.detail === "FT";
     const aWon = done && ((_a = third.away) == null ? void 0 : _a.winner), hWon = done && ((_b = third.home) == null ? void 0 : _b.winner);
