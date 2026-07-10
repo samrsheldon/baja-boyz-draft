@@ -1894,6 +1894,83 @@
     }
 
 
+    // ─── WHO'S STILL STANDING SCREEN ──────────────────────────────────────────
+
+    function SurvivorsScreen({ state }) {
+      const { players, draftOrder, picks, scores } = state;
+      const { eliminated, nextMatch } = useKnockoutInfo();
+
+      const ownerByTeamId = React.useMemo(() => {
+        const m = {};
+        picks.forEach((teamId, idx) => { if (teamId) m[teamId] = players[pickToPlayer(idx, draftOrder)]; });
+        return m;
+      }, [picks, draftOrder, players]);
+
+      const knockoutStarted = eliminated.size > 0;
+      const alive = TEAMS
+        .filter(t => !eliminated.has(t.id))
+        .map(t => {
+          const s = scores[t.id] || {};
+          const stage = nextMatch[t.id]?.round || s.roundReached || null;
+          return { t, owner: ownerByTeamId[t.id], reached: s.roundReached, bonus: ROUND_BONUS[s.roundReached] || 0, stage };
+        })
+        .sort((a, b) => (ROUND_ORDER[b.stage] || 0) - (ROUND_ORDER[a.stage] || 0) || (a.t.rank || 999) - (b.t.rank || 999));
+
+      // How many teams each player still has alive
+      const aliveByPlayer = players.map(p => ({ p, n: alive.filter(a => a.owner === p).length }))
+        .sort((a, b) => b.n - a.n);
+
+      return (
+        <div className="p-4 md:p-6 max-w-2xl mx-auto">
+          <div className="flex items-baseline justify-between mb-1">
+            <h2 className="text-xl font-black text-white">Who's Still Standing</h2>
+            {knockoutStarted && <span className="text-xs text-gray-500">{alive.length} of 48 left</span>}
+          </div>
+          <p className="text-xs text-gray-500 mb-5">Live from ESPN · every team still alive and who drafted it 🔥</p>
+
+          {!knockoutStarted && (
+            <p className="text-gray-500 text-sm">Everyone's still in it — survivors show once the knockouts begin.</p>
+          )}
+
+          {knockoutStarted && (
+            <>
+              {/* who still has ammo */}
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 mb-5">
+                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Live teams per player</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {aliveByPlayer.map(({ p, n }) => (
+                    <span key={p} className={`text-xs rounded-lg px-2.5 py-1 font-semibold ${n > 0 ? 'bg-green-900/40 text-green-300 border border-green-700/50' : 'bg-gray-900 text-gray-600'}`}>
+                      {p} <span className="font-black">{n}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* survivors */}
+              <div className="space-y-2">
+                {alive.map(({ t, owner, stage, bonus }) => (
+                  <div key={t.id} className="flex items-center gap-3 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3">
+                    <span className="text-2xl flex-shrink-0">{t.flag}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-white truncate">{t.name}</div>
+                      {owner && <div className="text-xs text-green-400 truncate">{owner}</div>}
+                    </div>
+                    {stage && (
+                      <span className="text-[10px] font-bold text-amber-300 bg-amber-400/10 border border-amber-400/25 rounded-lg px-2 py-1 flex-shrink-0 whitespace-nowrap">
+                        {KO_ROUND_SHORT[stage] || stage}
+                      </span>
+                    )}
+                    <span className="text-sm font-black text-green-400 flex-shrink-0 w-8 text-right">+{bonus}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      );
+    }
+
+
     // ─── GALLERY SCREEN ───────────────────────────────────────────────────────
 
     function GalleryScreen() {
@@ -3028,7 +3105,7 @@
         { id: 'fixtures',    emoji: '⚽️', label: 'Fixtures' },
         { id: 'bracket',     emoji: '🥊', label: 'Bracket' },
         { id: 'gallery',     emoji: '📸', label: 'Gallery' },
-        { id: 'rankings',    emoji: '🌍', label: 'Rankings' },
+        { id: 'survivors',   emoji: '🔥', label: 'Alive' },
         { id: 'settings',    emoji: '⚙️',  label: 'Settings' },
       ];
 
@@ -3085,7 +3162,7 @@
             {activeTab === 'fixtures'    && <FixturesScreen    state={state} />}
             {activeTab === 'bracket'     && <KnockoutScreen    state={state} />}
             {activeTab === 'groups'      && <GroupsScreen      state={state} />}
-            {activeTab === 'rankings'    && <RankingsScreen    state={state} />}
+            {activeTab === 'survivors'   && <SurvivorsScreen   state={state} />}
             {activeTab === 'gallery'     && <GalleryScreen     />}
             {activeTab === 'scoring'     && <ScoringScreen     state={state} onUpdateScore={handleUpdateScore} onBulkUpdate={handleBulkUpdateScores} />}
             {activeTab === 'leaderboard' && <LeaderboardScreen state={state} />}

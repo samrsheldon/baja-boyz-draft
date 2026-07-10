@@ -1407,6 +1407,26 @@ function FixturesScreen({ state }) {
     })()));
   }))))));
 }
+function SurvivorsScreen({ state }) {
+  const { players, draftOrder, picks, scores } = state;
+  const { eliminated, nextMatch } = useKnockoutInfo();
+  const ownerByTeamId = React.useMemo(() => {
+    const m = {};
+    picks.forEach((teamId, idx) => {
+      if (teamId) m[teamId] = players[pickToPlayer(idx, draftOrder)];
+    });
+    return m;
+  }, [picks, draftOrder, players]);
+  const knockoutStarted = eliminated.size > 0;
+  const alive = TEAMS.filter((t) => !eliminated.has(t.id)).map((t) => {
+    var _a;
+    const s = scores[t.id] || {};
+    const stage = ((_a = nextMatch[t.id]) == null ? void 0 : _a.round) || s.roundReached || null;
+    return { t, owner: ownerByTeamId[t.id], reached: s.roundReached, bonus: ROUND_BONUS[s.roundReached] || 0, stage };
+  }).sort((a, b) => (ROUND_ORDER[b.stage] || 0) - (ROUND_ORDER[a.stage] || 0) || (a.t.rank || 999) - (b.t.rank || 999));
+  const aliveByPlayer = players.map((p) => ({ p, n: alive.filter((a) => a.owner === p).length })).sort((a, b) => b.n - a.n);
+  return /* @__PURE__ */ React.createElement("div", { className: "p-4 md:p-6 max-w-2xl mx-auto" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-baseline justify-between mb-1" }, /* @__PURE__ */ React.createElement("h2", { className: "text-xl font-black text-white" }, "Who's Still Standing"), knockoutStarted && /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-500" }, alive.length, " of 48 left")), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500 mb-5" }, "Live from ESPN \xB7 every team still alive and who drafted it \u{1F525}"), !knockoutStarted && /* @__PURE__ */ React.createElement("p", { className: "text-gray-500 text-sm" }, "Everyone's still in it \u2014 survivors show once the knockouts begin."), knockoutStarted && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "bg-gray-800 border border-gray-700 rounded-xl p-3 mb-5" }, /* @__PURE__ */ React.createElement("div", { className: "text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2" }, "Live teams per player"), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-1.5" }, aliveByPlayer.map(({ p, n }) => /* @__PURE__ */ React.createElement("span", { key: p, className: `text-xs rounded-lg px-2.5 py-1 font-semibold ${n > 0 ? "bg-green-900/40 text-green-300 border border-green-700/50" : "bg-gray-900 text-gray-600"}` }, p, " ", /* @__PURE__ */ React.createElement("span", { className: "font-black" }, n))))), /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, alive.map(({ t, owner, stage, bonus }) => /* @__PURE__ */ React.createElement("div", { key: t.id, className: "flex items-center gap-3 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-2xl flex-shrink-0" }, t.flag), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "font-bold text-white truncate" }, t.name), owner && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-green-400 truncate" }, owner)), stage && /* @__PURE__ */ React.createElement("span", { className: "text-[10px] font-bold text-amber-300 bg-amber-400/10 border border-amber-400/25 rounded-lg px-2 py-1 flex-shrink-0 whitespace-nowrap" }, KO_ROUND_SHORT[stage] || stage), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-black text-green-400 flex-shrink-0 w-8 text-right" }, "+", bonus))))));
+}
 function GalleryScreen() {
   const [photos, setPhotos] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
@@ -2183,7 +2203,7 @@ function App() {
     { id: "fixtures", emoji: "\u26BD\uFE0F", label: "Fixtures" },
     { id: "bracket", emoji: "\u{1F94A}", label: "Bracket" },
     { id: "gallery", emoji: "\u{1F4F8}", label: "Gallery" },
-    { id: "rankings", emoji: "\u{1F30D}", label: "Rankings" },
+    { id: "survivors", emoji: "\u{1F525}", label: "Alive" },
     { id: "settings", emoji: "\u2699\uFE0F", label: "Settings" }
   ];
   const draftProgress = state.picks.filter((p) => p !== null).length;
@@ -2203,7 +2223,7 @@ function App() {
     },
     /* @__PURE__ */ React.createElement("span", { className: "text-base leading-none" }, tab.emoji),
     /* @__PURE__ */ React.createElement("span", { style: { fontSize: "9px" } }, tab.label)
-  )))), passModal && /* @__PURE__ */ React.createElement(PassModal, { info: passModal, roomId: FIXED_ROOM_ID, onClose: () => setPassModal(null) }), /* @__PURE__ */ React.createElement("main", { className: "flex-1 overflow-auto" }, activeTab === "draft" && /* @__PURE__ */ React.createElement(DraftScreen, { state, onPick: handlePick, onUndo: handleUndo, onShare: setPassModal }), activeTab === "fixtures" && /* @__PURE__ */ React.createElement(FixturesScreen, { state }), activeTab === "bracket" && /* @__PURE__ */ React.createElement(KnockoutScreen, { state }), activeTab === "groups" && /* @__PURE__ */ React.createElement(GroupsScreen, { state }), activeTab === "rankings" && /* @__PURE__ */ React.createElement(RankingsScreen, { state }), activeTab === "gallery" && /* @__PURE__ */ React.createElement(GalleryScreen, null), activeTab === "scoring" && /* @__PURE__ */ React.createElement(ScoringScreen, { state, onUpdateScore: handleUpdateScore, onBulkUpdate: handleBulkUpdateScores }), activeTab === "leaderboard" && /* @__PURE__ */ React.createElement(LeaderboardScreen, { state }), activeTab === "settings" && /* @__PURE__ */ React.createElement(SettingsScreen, { autoFilled: !!state.autoFilled, scores: state.scores, onBulkUpdate: handleBulkUpdateScores })));
+  )))), passModal && /* @__PURE__ */ React.createElement(PassModal, { info: passModal, roomId: FIXED_ROOM_ID, onClose: () => setPassModal(null) }), /* @__PURE__ */ React.createElement("main", { className: "flex-1 overflow-auto" }, activeTab === "draft" && /* @__PURE__ */ React.createElement(DraftScreen, { state, onPick: handlePick, onUndo: handleUndo, onShare: setPassModal }), activeTab === "fixtures" && /* @__PURE__ */ React.createElement(FixturesScreen, { state }), activeTab === "bracket" && /* @__PURE__ */ React.createElement(KnockoutScreen, { state }), activeTab === "groups" && /* @__PURE__ */ React.createElement(GroupsScreen, { state }), activeTab === "survivors" && /* @__PURE__ */ React.createElement(SurvivorsScreen, { state }), activeTab === "gallery" && /* @__PURE__ */ React.createElement(GalleryScreen, null), activeTab === "scoring" && /* @__PURE__ */ React.createElement(ScoringScreen, { state, onUpdateScore: handleUpdateScore, onBulkUpdate: handleBulkUpdateScores }), activeTab === "leaderboard" && /* @__PURE__ */ React.createElement(LeaderboardScreen, { state }), activeTab === "settings" && /* @__PURE__ */ React.createElement(SettingsScreen, { autoFilled: !!state.autoFilled, scores: state.scores, onBulkUpdate: handleBulkUpdateScores })));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(/* @__PURE__ */ React.createElement(App, null));
 
