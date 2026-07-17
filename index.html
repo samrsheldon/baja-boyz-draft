@@ -228,6 +228,8 @@ const ESPN_SLUG_TO_KO_ROUND = {
   "quarterfinals": "Quarterfinal",
   "semifinals": "Semifinal",
   "third-place": "3rd Place",
+  "3rd-place-match": "3rd Place",
+  // ESPN's actual slug for the bronze final
   "final": "Final"
 };
 const KO_ROUNDS = ["Round of 32", "Round of 16", "Quarterfinal", "Semifinal", "3rd Place", "Final"];
@@ -567,7 +569,7 @@ function RostersScreen({ state }) {
   }))))));
 }
 async function fetchESPNScores(currentScores) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
   const teamsToFetch = TEAMS.filter((t) => t.espnId);
   const fetched = await Promise.allSettled(
     teamsToFetch.map(
@@ -582,6 +584,7 @@ async function fetchESPNScores(currentScores) {
     "quarterfinals": "Quarterfinal",
     "semifinals": "Semifinal",
     "third-place": "3rd Place",
+    "3rd-place-match": "3rd Place",
     "final": "Runner-up"
   };
   const roundOf = (e) => {
@@ -622,18 +625,25 @@ async function fetchESPNScores(currentScores) {
     for (const e of completed) {
       const r = roundOf(e);
       if (!r || r === "Eliminated (Group Stage)") continue;
+      if (r === "3rd Place") {
+        const us = (((_l = (_k = e.competitions) == null ? void 0 : _k[0]) == null ? void 0 : _l.competitors) || []).find((c) => {
+          var _a2;
+          return String((_a2 = c.team) == null ? void 0 : _a2.id) === eid || String(c.id) === eid;
+        });
+        if (!((us == null ? void 0 : us.winner) || ((_m = us == null ? void 0 : us.score) == null ? void 0 : _m.winner))) continue;
+      }
       if (deepest === null || ROUND_ORDER[r] > ROUND_ORDER[deepest]) deepest = r;
     }
     if (deepest) {
       roundReached = deepest;
       const finalMatch = completed.find((e) => roundOf(e) === "Runner-up");
       if (finalMatch) {
-        const comps = ((_l = (_k = finalMatch.competitions) == null ? void 0 : _k[0]) == null ? void 0 : _l.competitors) || [];
+        const comps = ((_o = (_n = finalMatch.competitions) == null ? void 0 : _n[0]) == null ? void 0 : _o.competitors) || [];
         const us = comps.find((c) => {
           var _a2;
           return String((_a2 = c.team) == null ? void 0 : _a2.id) === eid || String(c.id) === eid;
         });
-        if ((us == null ? void 0 : us.winner) || ((_m = us == null ? void 0 : us.score) == null ? void 0 : _m.winner)) roundReached = "Champion";
+        if ((us == null ? void 0 : us.winner) || ((_p = us == null ? void 0 : us.score) == null ? void 0 : _p.winner)) roundReached = "Champion";
       }
     }
     newScores[team.id] = { groupPoints, roundReached };
@@ -750,12 +760,13 @@ function LeaderboardScreen({ state }) {
   const [showRules, setShowRules] = useState(false);
   const { eliminated, nextMatch } = useKnockoutInfo();
   const CHAMPION_BONUS = ROUND_BONUS["Champion"];
-  const loserBonus = (round) => round === "Final" ? ROUND_BONUS["Runner-up"] : ROUND_BONUS[round] || 0;
+  const loserBonus = (round) => round === "Final" ? ROUND_BONUS["Runner-up"] : round === "3rd Place" ? ROUND_BONUS["Semifinal"] : ROUND_BONUS[round] || 0;
   const TIER_SEQUENCE = [55, 45, 38, 32, 22, 22, 22, 22, 14, 14, 14, 14, 14, 14, 14, 14];
   function ceilingUpside(alive) {
     const target = {};
     alive.forEach((t) => {
-      target[t.id] = CHAMPION_BONUS;
+      var _a;
+      target[t.id] = ((_a = nextMatch[t.id]) == null ? void 0 : _a.round) === "3rd Place" ? ROUND_BONUS["3rd Place"] : CHAMPION_BONUS;
     });
     const capped = /* @__PURE__ */ new Set();
     alive.forEach((t) => {

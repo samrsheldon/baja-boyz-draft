@@ -48,7 +48,8 @@ ROUND_ORDER = {
 SLUG_TO_ROUND = {
     "round-of-32": "Round of 32", "round-of-16": "Round of 16",
     "quarterfinals": "Quarterfinal", "semifinals": "Semifinal",
-    "third-place": "3rd Place", "final": "Runner-up",
+    "third-place": "3rd Place", "3rd-place-match": "3rd Place",
+    "final": "Runner-up",
 }
 
 
@@ -113,6 +114,13 @@ def compute(tid, eid, events):
         r = round_of(e)
         if not r or r == "Eliminated (Group Stage)":
             continue
+        if r == "3rd Place":
+            # Bronze playoff counts only for the winner; the loser finishes 4th
+            # and stays at the Semifinal tier.
+            comps = e.get("competitions", [{}])[0].get("competitors", [])
+            us = next((c for c in comps if str(c.get("team", {}).get("id")) == eid), None)
+            if not (us and (us.get("winner") or (us.get("score") or {}).get("winner"))):
+                continue
         if deepest is None or ROUND_ORDER[r] > ROUND_ORDER[deepest]:
             deepest = r
     if deepest:

@@ -211,12 +211,13 @@
 
     // Knockout matches expose their round on event.season.slug (seasonType is null).
     const ESPN_SLUG_TO_KO_ROUND = {
-      'round-of-32':   'Round of 32',
-      'round-of-16':   'Round of 16',
-      'quarterfinals': 'Quarterfinal',
-      'semifinals':    'Semifinal',
-      'third-place':   '3rd Place',
-      'final':         'Final',
+      'round-of-32':      'Round of 32',
+      'round-of-16':      'Round of 16',
+      'quarterfinals':    'Quarterfinal',
+      'semifinals':       'Semifinal',
+      'third-place':      '3rd Place',
+      '3rd-place-match':  '3rd Place',   // ESPN's actual slug for the bronze final
+      'final':            'Final',
     };
     const KO_ROUNDS = ['Round of 32', 'Round of 16', 'Quarterfinal', 'Semifinal', '3rd Place', 'Final'];
     const KO_ROUND_SHORT = {
@@ -728,7 +729,8 @@
       const SLUG_TO_SCORING_ROUND = {
         'round-of-32': 'Round of 32', 'round-of-16': 'Round of 16',
         'quarterfinals': 'Quarterfinal', 'semifinals': 'Semifinal',
-        'third-place': '3rd Place', 'final': 'Runner-up',
+        'third-place': '3rd Place', '3rd-place-match': '3rd Place',
+        'final': 'Runner-up',
       };
       const roundOf = e =>
         SLUG_TO_SCORING_ROUND[e.season?.slug]
@@ -760,12 +762,18 @@
           else if (ourScore === theirScore) groupPoints += 1;
         }
 
-        // Furthest round reached = deepest knockout match they appear in
+        // Furthest round reached = deepest knockout match they appear in.
+        // Exception: the 3rd-place playoff only counts for the WINNER — the loser
+        // finishes 4th and stays at the Semifinal tier.
         let roundReached = 'Eliminated (Group Stage)';
         let deepest = null;
         for (const e of completed) {
           const r = roundOf(e);
           if (!r || r === 'Eliminated (Group Stage)') continue;
+          if (r === '3rd Place') {
+            const us = (e.competitions?.[0]?.competitors || []).find(c => String(c.team?.id) === eid || String(c.id) === eid);
+            if (!(us?.winner || us?.score?.winner)) continue; // lost the bronze → no upgrade
+          }
           if (deepest === null || ROUND_ORDER[r] > ROUND_ORDER[deepest]) deepest = r;
         }
         if (deepest) {
@@ -993,7 +1001,10 @@
 
       const CHAMPION_BONUS = ROUND_BONUS['Champion']; // 55 — a live team's max possible bonus
       // The bonus a team banks by LOSING a match of the given round (reaches that round).
-      const loserBonus = round => round === 'Final' ? ROUND_BONUS['Runner-up'] : (ROUND_BONUS[round] || 0);
+      const loserBonus = round =>
+        round === 'Final' ? ROUND_BONUS['Runner-up']
+        : round === '3rd Place' ? ROUND_BONUS['Semifinal']  // bronze loser finishes 4th
+        : (ROUND_BONUS[round] || 0);
       // Distinct best finishing positions in one bracket: only one champion, one runner-up,
       // one 3rd, one 4th (SF), then quarterfinalists (22×4), R16 (14×8)…  A player's K teams
       // can occupy at most the K deepest distinct outcomes.
@@ -1004,7 +1015,11 @@
       // only one team can win it all, one can be runner-up, etc.
       function ceilingUpside(alive) {
         const target = {};
-        alive.forEach(t => { target[t.id] = CHAMPION_BONUS; });
+        alive.forEach(t => {
+          // A team whose next (and only remaining) match is the 3rd-place playoff
+          // can reach at most the 3rd Place tier — it can't win the title.
+          target[t.id] = nextMatch[t.id]?.round === '3rd Place' ? ROUND_BONUS['3rd Place'] : CHAMPION_BONUS;
+        });
         const capped = new Set();
         alive.forEach(t => {
           const m = nextMatch[t.id];
