@@ -993,6 +993,106 @@
       );
     }
 
+    // ─── AWARDS & SUPERLATIVES SCREEN ─────────────────────────────────────────
+
+    function AwardsScreen({ state }) {
+      const { players, draftOrder, picks, scores } = state;
+
+      React.useEffect(() => {
+        const t = setTimeout(() => fireConfetti({ count: 220, duration: 4000, spread: 0.7 }), 250);
+        return () => clearTimeout(t);
+      }, []);
+
+      const A = React.useMemo(() => {
+        const stats = [];
+        picks.forEach((id, i) => {
+          if (!id) return;
+          const team = TEAM_BY_ID[id]; const s = scores[id] || {};
+          const rr = s.roundReached || 'Eliminated (Group Stage)';
+          stats.push({
+            id, team, owner: players[pickToPlayer(i, draftOrder)],
+            round: Math.floor(i / 8) + 1, gp: s.groupPoints || 0, rr,
+            ord: ROUND_ORDER[rr] || 0, rank: team.rank || 999,
+            total: (s.groupPoints || 0) + (ROUND_BONUS[rr] || 0),
+          });
+        });
+        const byPlayer = players.map(p => ({
+          p, total: stats.filter(s => s.owner === p).reduce((a, b) => a + b.total, 0),
+        })).sort((a, b) => b.total - a.total);
+        const best = (arr, fn) => arr.reduce((a, b) => (fn(b) > fn(a) ? b : a));
+        const played = stats.filter(s => s.ord >= 1);
+        const cinderella = best(played, s => s.ord * s.rank);
+        const steal = best(stats.filter(s => s.round >= 2 && s.id !== cinderella.id), s => s.total * 100 + s.round);
+        const groupKOs = stats.filter(s => s.ord === 0);
+        const bust = groupKOs.length ? groupKOs.reduce((a, b) => (b.rank < a.rank ? b : a)) : null;
+        const bestOrd = {}; players.forEach(p => { bestOrd[p] = Math.max(...stats.filter(s => s.owner === p).map(s => s.ord), 0); });
+        const frozen = players.slice().sort((a, b) => bestOrd[a] - bestOrd[b])[0];
+        return {
+          champion: byPlayer[0], runnerUp: byPlayer[1], spoon: byPlayer[byPlayer.length - 1],
+          mvp: best(stats, s => s.total), cinderella, steal,
+          groupKing: best(stats, s => s.gp), bust, frozen, byPlayer,
+        };
+      }, [players, draftOrder, picks, scores]);
+
+      const teamLine = s => <>{s.team.flag} <span className="font-bold text-white">{s.team.name}</span> <span className="text-green-400">· {s.owner}</span></>;
+
+      const Card = ({ emoji, title, children, accent }) => (
+        <div className={`bg-gray-800 border rounded-xl p-3.5 ${accent || 'border-gray-700'}`}>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">{emoji} {title}</div>
+          <div className="text-sm text-gray-200 leading-snug">{children}</div>
+        </div>
+      );
+
+      return (
+        <div className="p-4 md:p-6 max-w-2xl mx-auto">
+          <h2 className="text-xl font-black text-white mb-1">🏅 Awards & Superlatives</h2>
+          <p className="text-xs text-gray-500 mb-5">World Cup 2026 · the final word on a wild ride 🌵</p>
+
+          {/* Champion hero */}
+          <div className="champ-banner text-center bg-amber-400/10 border border-amber-400/40 rounded-2xl py-5 mb-5"
+            onClick={() => fireConfetti({ count: 200, duration: 3600, spread: 0.6 })}>
+            <div className="text-4xl mb-1">👑🏆</div>
+            <div className="text-[10px] font-bold text-amber-200/70 uppercase tracking-[0.3em] mb-1">Baja Boyz Champion</div>
+            <div className="text-2xl font-black text-amber-300">{A.champion.p}</div>
+            <div className="text-sm text-green-400 font-bold mt-1">{A.champion.total} pts · 🇪🇸 Spain, World Champions</div>
+            <div className="text-[11px] text-gray-500 mt-1">(tap for confetti 🎉)</div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Card emoji="🥈" title="Runner-Up" accent="border-gray-600">
+              <span className="font-bold text-white">{A.runnerUp.p}</span> — {A.runnerUp.total} pts, one extra-time goal from glory.
+            </Card>
+            <Card emoji="💎" title="MVP Team">
+              {teamLine(A.mvp)} — {A.mvp.total} pts, the tournament's top-scoring pick.
+            </Card>
+            <Card emoji="🐐" title="Cinderella Run">
+              {teamLine(A.cinderella)} — ranked #{A.cinderella.rank} in the world, stormed to the {A.cinderella.rr}. Giant-killers.
+            </Card>
+            <Card emoji="🃏" title="Steal of the Draft">
+              {teamLine(A.steal)} — a Round {A.steal.round} pick that returned {A.steal.total} pts. Highway robbery.
+            </Card>
+            <Card emoji="⚽️" title="Group-Stage King">
+              {teamLine(A.groupKing)} — {A.groupKing.gp}/9 points, perfect in the groups.
+            </Card>
+            {A.bust && (
+              <Card emoji="💀" title="Biggest Bust">
+                {teamLine(A.bust)} — #{A.bust.rank} in the world and couldn't escape the group. Ouch.
+              </Card>
+            )}
+            <Card emoji="🧊" title="First to Freeze">
+              <span className="font-bold text-white">{A.frozen}</span> — led the group stage for days, then watched every team iced by the knockouts.
+            </Card>
+            <Card emoji="🥄" title="Wooden Spoon" accent="border-gray-700">
+              <span className="font-bold text-white">{A.spoon.p}</span> {A.spoon.p === 'Claudinho' ? '🤖 — the bot. Dead last. As nature intended.' : `— ${A.spoon.total} pts, someone had to.`}
+            </Card>
+          </div>
+
+          <p className="text-center text-xs text-gray-600 mt-6">48 teams · 8 managers · 1 champion. ¡Hasta la próxima! 🌵🏆</p>
+        </div>
+      );
+    }
+
+
     // ─── LEADERBOARD SCREEN ───────────────────────────────────────────────────
 
     function LeaderboardScreen({ state }) {
@@ -2920,7 +3020,7 @@
       const [state, setState]         = useState(DEFAULT_DRAFT_STATE);
       const [loading, setLoading]     = React.useState(true);
       const [fbError, setFbError]     = React.useState(null);
-      const [activeTab, setActiveTab] = React.useState('leaderboard');
+      const [activeTab, setActiveTab] = React.useState('awards');
       const [passModal, setPassModal] = React.useState(null);
       const [showIntro, setShowIntro]   = React.useState(() => {
         try { return !sessionStorage.getItem('bajaIntroSeen'); } catch { return true; }
@@ -3117,6 +3217,7 @@
       }
 
       const tabs = [
+        { id: 'awards',      emoji: '🏅', label: 'Awards' },
         { id: 'leaderboard', emoji: '🏆', label: 'Ldrboard' },
         { id: 'groups',      emoji: '🗓', label: 'Groups' },
         { id: 'fixtures',    emoji: '⚽️', label: 'Fixtures' },
@@ -3182,6 +3283,7 @@
             {activeTab === 'survivors'   && <SurvivorsScreen   state={state} />}
             {activeTab === 'gallery'     && <GalleryScreen     />}
             {activeTab === 'scoring'     && <ScoringScreen     state={state} onUpdateScore={handleUpdateScore} onBulkUpdate={handleBulkUpdateScores} />}
+            {activeTab === 'awards'      && <AwardsScreen      state={state} />}
             {activeTab === 'leaderboard' && <LeaderboardScreen state={state} />}
             {activeTab === 'settings'    && <SettingsScreen    autoFilled={!!state.autoFilled} scores={state.scores} onBulkUpdate={handleBulkUpdateScores} />}
           </main>
