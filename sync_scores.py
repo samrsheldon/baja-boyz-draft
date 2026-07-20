@@ -38,6 +38,7 @@ ROUND_NAME_TO_ROUND = {
     "quarterfinals": "Quarterfinal", "quarterfinal": "Quarterfinal",
     "semifinals": "Semifinal", "semifinal": "Semifinal",
     "third place": "3rd Place", "third-place": "3rd Place", "3rd place": "3rd Place",
+    "3rd-place match": "3rd Place", "3rd place match": "3rd Place",
     "final": "Runner-up",  # upgraded to Champion if they won
 }
 ROUND_ORDER = {
